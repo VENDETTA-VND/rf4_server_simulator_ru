@@ -56,7 +56,8 @@ function Save-GameSession {
         token_timestamp = $TokenTimestamp
     }
     $tmp = $sessionPath + '.tmp'
-    $session | ConvertTo-Json | Set-Content -LiteralPath $tmp -Encoding UTF8
+    $json = $session | ConvertTo-Json -Compress
+    [IO.File]::WriteAllText($tmp, $json, (New-Object System.Text.UTF8Encoding($false)))
     Move-Item -LiteralPath $tmp -Destination $sessionPath -Force
 }
 function Invoke-AccountAction {
@@ -66,6 +67,8 @@ function Invoke-AccountAction {
     if ([string]::IsNullOrWhiteSpace($username) -or [string]::IsNullOrEmpty($password)) {
         throw 'Введи имя аккаунта и пароль.'
     }
+    # Аккаунтный запрос должен попасть на выбранный сервер, а не на официальный.
+    Set-ServerHosts
     $body = @{ username = $username; password = $password } | ConvertTo-Json -Compress
     $uri = "https://api.rf4game.ru/account/$Action"
     try {
