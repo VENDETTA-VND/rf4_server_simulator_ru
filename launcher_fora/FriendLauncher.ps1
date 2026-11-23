@@ -200,13 +200,11 @@ $form.Controls.Add($accountLabel)
 $usernameBox = New-Object System.Windows.Forms.TextBox
 $usernameBox.Location = New-Object System.Drawing.Point(110, 107)
 $usernameBox.Size = New-Object System.Drawing.Size(180, 27)
-$usernameBox.PlaceholderText = 'Логин'
 $form.Controls.Add($usernameBox)
 $passwordBox = New-Object System.Windows.Forms.TextBox
 $passwordBox.Location = New-Object System.Drawing.Point(300, 107)
 $passwordBox.Size = New-Object System.Drawing.Size(240, 27)
 $passwordBox.UseSystemPasswordChar = $true
-$passwordBox.PlaceholderText = 'Пароль'
 $form.Controls.Add($passwordBox)
 $registerButton = New-Object System.Windows.Forms.Button
 $registerButton.Text = 'Регистрация'
