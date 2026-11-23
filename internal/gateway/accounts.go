@@ -1,11 +1,11 @@
 package gateway
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"regexp"
 	"strings"
+	"strconv"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -96,6 +96,15 @@ func (s *LoginServer) registerAccount(w http.ResponseWriter, r *http.Request, db
 		writeAccountJSON(w, http.StatusInternalServerError, accountResponse{Error: "profile creation failed"})
 		return
 	}
+	// Синхронизируем общий счётчик UID, чтобы старый IP/legacy-путь не выдал занятый ID.
+	if _, err = tx.ExecContext(r.Context(), `
+		INSERT INTO kv(k,v) VALUES('userid_seq',?)
+		ON CONFLICT(k) DO UPDATE SET v=CASE
+			WHEN CAST(kv.v AS INTEGER)<CAST(excluded.v AS INTEGER) THEN excluded.v ELSE kv.v END`,
+		uidString(uid)); err != nil {
+		writeAccountJSON(w, http.StatusInternalServerError, accountResponse{Error: "account sequence update failed"})
+		return
+	}
 	if err = tx.Commit(); err != nil {
 		writeAccountJSON(w, http.StatusInternalServerError, accountResponse{Error: "account creation failed"})
 		return
@@ -135,4 +144,5 @@ func writeAccountJSON(w http.ResponseWriter, status int, response accountRespons
 	_ = json.NewEncoder(w).Encode(response)
 }
 
-var _ = sql.ErrNoRows
+
+func uidString(uid int64) string { return strconv.FormatInt(uid, 10) }
