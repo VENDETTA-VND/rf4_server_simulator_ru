@@ -76,6 +76,10 @@ func NewLoginServer(cfg config.Gateway, store Store, log *slog.Logger, obs *metr
 	if storage, ok := store.(*SQLiteStore); ok {
 		accountPortal := portal.New(storage.DB, s.useridForRemote)
 		s.handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/account/") {
+				s.handleAccount(w, r, storage)
+				return
+			}
 			if strings.HasPrefix(r.URL.Path, "/portal/") {
 				accountPortal.ServeHTTP(w, r)
 				return
