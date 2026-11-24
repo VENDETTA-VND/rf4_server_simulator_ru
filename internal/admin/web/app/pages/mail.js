@@ -46,7 +46,7 @@ export default async function mail(params) {
     attachBox.replaceChildren(attach.length ? h('div', { class: 'card' }, h('div', { class: 'list' }, attach.map((a, i) => h('div', { class: 'list-item' },
       itemIcon(a.item_id), h('div', { class: 'grow' }, h('div', { class: 'title', text: a.name }), h('div', { class: 'sub mono', text: a.item_id })),
       h('label', { class: 'row small muted' }, 'Количество', h('input', { class: 'input num', style: { width: '80px', height: '30px' }, value: a.qty, oninput: (e) => { a.qty = Math.max(1, Math.floor(+e.target.value || 1)); preview(); } })),
-      btn('', () => { attach.splice(i, 1); drawAttach(); preview(); }, 'ghost icon sm', { icon: 'x', 'aria-label': '移除' }))))) : h('div', { class: 'muted small', text: 'Нет вложений.' }));
+      btn('', () => { attach.splice(i, 1); drawAttach(); preview(); }, 'ghost icon sm', { icon: 'x', 'aria-label': 'Удалить' }))))) : h('div', { class: 'muted small', text: 'Нет вложений.' }));
   };
   drawAttach();
 
@@ -64,7 +64,7 @@ export default async function mail(params) {
   const send = btn('Отправить', async () => {
     if (!to) { toast('Сначала выберите получателя', 'bad'); return; }
     if (!text.value.trim() && !attach.length) { toast('Нельзя отправить пустое письмо без текста и вложений', 'bad'); return; }
-    if (!(await confirmDialog({ title: `发给「${to.name}」？`, desc: attach.length ? `附带 ${attach.length} 种Предмет。Отправленное письмо нельзя отозвать.` : 'Отправленное письмо нельзя отозвать.', confirm: 'Отправить' }))) return;
+    if (!(await confirmDialog({ title: `Отправить игроку «${to.name}»?`, desc: attach.length ? `附带 ${attach.length} 种Предмет。Отправленное письмо нельзя отозвать.` : 'Отправленное письмо нельзя отозвать.', confirm: 'Отправить' }))) return;
     send.disabled = true;
     try {
       await post('/api/mail/send', { uid: to.uid, text: text.value.trim(), items: attach.map((a) => ({ item_id: a.item_id, qty: a.qty })) });
