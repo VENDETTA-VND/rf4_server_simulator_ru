@@ -1,11 +1,11 @@
-// 操作记录：后台每一次修改，可按类型筛选。
+// Журнал действий：后台每一次修改，可按Тип筛选。
 import { h, apiList, pageHead, badge, empty, searchBox, timeText, relTime } from '../core.js';
 import { auditLabel, AUDIT_LABELS } from '../labels.js';
 
 const KINDS = [
-  ['all', '全部', null],
-  ['player', '玩家', /^(player_update|grant_item|item_delete|keepnet_|skill_|kick|ban|mail_)/],
-  ['play', '钓鱼玩法', /^(tunable|fish_|bite_mode|spawn_mode|hook_profile|bait_rule)/],
+  ['all', 'Все', null],
+  ['player', 'Игроки', /^(player_update|grant_item|item_delete|keepnet_|skill_|kick|ban|mail_)/],
+  ['play', '钓Рыба玩法', /^(tunable|fish_|bite_mode|spawn_mode|hook_profile|bait_rule)/],
   ['shop', '商店', /^shop_/],
   ['login', '登录', /^login$/],
 ];
@@ -37,9 +37,9 @@ export default async function audit() {
   draw();
   const filters = h('div', { class: 'seg' }, KINDS.map(([k, l]) => h('button', { type: 'button', class: k === kind ? 'on' : '', onclick: (ev) => { kind = k; [...filters.children].forEach((b) => b.classList.toggle('on', b === ev.currentTarget)); draw(); } }, l)));
   return h('div', { class: 'page' },
-    pageHead('操作记录', '管理后台里做过的每一次修改（最近 200 条）。'),
+    pageHead('Журнал действий', 'Последние 200 изменений, выполненных через панель администратора.'),
     h('div', { class: 'card card-pad' },
-      h('div', { class: 'row', style: { marginBottom: '14px' } }, filters, h('div', { class: 'grow', style: { maxWidth: '320px' } }, searchBox('搜索', (v) => { q = v.toLowerCase(); draw(); })), h('span', { class: 'spacer' }), count),
+      h('div', { class: 'row', style: { marginBottom: '14px' } }, filters, h('div', { class: 'grow', style: { maxWidth: '320px' } }, searchBox('Поиск', (v) => { q = v.toLowerCase(); draw(); })), h('span', { class: 'spacer' }), count),
       h('div', { class: 'table-wrap', style: { maxHeight: 'calc(100vh - 250px)' } }, h('table', { class: 'table' },
-        h('thead', {}, h('tr', {}, h('th', { text: '时间' }), h('th', { text: '做了什么' }), h('th', { text: '对象' }), h('th', { text: '内容' }), h('th', { text: '操作人' }))), tbody))));
+        h('thead', {}, h('tr', {}, h('th', { text: 'Время' }), h('th', { text: 'Действие' }), h('th', { text: 'Объект' }), h('th', { text: 'Содержание' }), h('th', { text: 'Администратор' }))), tbody))));
 }
