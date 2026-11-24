@@ -3319,9 +3319,9 @@ func (s *Server) pushPendingBite(sess *Session, st *FishState, f *RolledFish, ge
 
 // speciesZhName 返回鱼种中文名（loc_wiki_fish.fish_zh）；缺名回退 key。
 func (s *Server) speciesZhName(ctx context.Context, key string) string {
-	if s == nil || s.DB == nil || key == "" {
-		return key
-	}
+	if key == "" { return key }
+	if name, ok := fishRussianNames[key]; ok { return name }
+	if s == nil || s.DB == nil { return key }
 	var name string
 	err := s.DB.SQL.QueryRowContext(ctx,
 		`SELECT COALESCE(NULLIF(fish_zh,''),?) FROM loc_wiki_fish WHERE fish_key=? LIMIT 1`,
@@ -3344,13 +3344,13 @@ func formatWeightG(g int64) string {
 func gradeZhName(grade int64) string {
 	switch grade {
 	case 2:
-		return "达标"
+		return "Нормальная"
 	case 3:
-		return "奖杯"
+		return "Трофейная"
 	case 4:
-		return "蓝冠"
+		return "Синяя корона"
 	}
-	return "普通"
+	return "Обычная"
 }
 
 // fishLandedText 钓获结算提示文本（KV 模板未启用时的降级文案）：
@@ -3364,9 +3364,9 @@ func (s *Server) fishLandedText(f *RolledFish, newRecord bool) string {
 	weight := formatWeightG(f.WeightG)
 	switch {
 	case f.Grade >= 2:
-		text := fmt.Sprintf("钓获%s：%s %s", gradeZhName(f.Grade), name, weight)
+		text := fmt.Sprintf("Поймана %s рыба: %s %s", gradeZhName(f.Grade), name, weight)
 		if newRecord {
-			text += "（新纪录）"
+			text += " (новый рекорд)"
 		}
 		return text
 	}
@@ -3378,7 +3378,7 @@ func (s *Server) fishKeptText(f *RolledFish) string {
 	if s == nil || f == nil {
 		return ""
 	}
-	return fmt.Sprintf("入护：%s %s", s.speciesZhName(s.dbCtx(), f.Species), formatWeightG(f.WeightG))
+	return fmt.Sprintf("В садок: %s %s", s.speciesZhName(s.dbCtx(), f.Species), formatWeightG(f.WeightG))
 }
 
 // fishReleasedText 放生提示文本；奖杯/蓝冠附档位。
@@ -3389,9 +3389,9 @@ func (s *Server) fishReleasedText(f *RolledFish) string {
 	name := s.speciesZhName(s.dbCtx(), f.Species)
 	weight := formatWeightG(f.WeightG)
 	if f.Grade >= 3 {
-		return fmt.Sprintf("放生%s：%s %s", gradeZhName(f.Grade), name, weight)
+		return fmt.Sprintf("Отпущена %s рыба: %s %s", gradeZhName(f.Grade), name, weight)
 	}
-	return fmt.Sprintf("放生：%s %s", name, weight)
+	return fmt.Sprintf("Отпущена рыба: %s %s", name, weight)
 }
 
 // fishEscapeText 跑鱼提示文本；f 为 nil 时只提示原因。
@@ -3400,9 +3400,9 @@ func (s *Server) fishEscapeText(f *RolledFish, reason string) string {
 		return ""
 	}
 	if f == nil {
-		return "跑鱼（" + reason + "）"
+		return "Сход рыбы (" + reason + "）"
 	}
-	return fmt.Sprintf("跑鱼：%s %s（%s）",
+	return fmt.Sprintf("Сход рыбы: %s %s (%s)",
 		s.speciesZhName(s.dbCtx(), f.Species), formatWeightG(f.WeightG), reason)
 }
 
@@ -3484,17 +3484,17 @@ var escapeTemplateKind = map[string]int{
 
 // fishEscapeTaunts 跑鱼语气词池：随机抽一条拼进跑鱼提示。
 var fishEscapeTaunts = []string{
-	"真是FW啊",
-	"这都能跑",
-	"煮熟的鸭子飞了",
-	"手滑了吧",
-	"竿子太拉了",
-	"鱼比人聪明",
-	"白忙活一场",
-	"差亿点点",
-	"又给跑了",
-	"空军预定",
-	"打龟佬",
+	"Ну и досада!",
+	"И как только умудрилась сойти?",
+	"Почти была в руках!",
+	"Бывает, сорвалась!",
+	"Снасть не выдержала!",
+	"Рыба оказалась хитрее!",
+	"Столько усилий впустую!",
+	"Совсем немного не хватило!",
+	"Опять ушла!",
+	"Сегодня без улова!",
+	"Рыбалка не задалась!",
 }
 
 // notifyFishEscape 跑鱼提示：类型3（蓝色 KV 模板），文案带随机语气词，
@@ -3524,16 +3524,16 @@ func (s *Server) notifyFishEscape(sess *Session, f *RolledFish, reason string) {
 			name = f.Species
 		}
 		if f.Grade >= 4 {
-			tier = "超级稀有 "
+			tier = "Сверхредкая "
 		} else if f.Grade == 3 {
-			tier = "稀有 "
+			tier = "Редкая "
 		}
 	}
 	taunt := fishEscapeTaunts[rand.Intn(len(fishEscapeTaunts))]
 	// 客户端 KV 模板恒在文案末尾追加“X 克/公斤”（缺键2 显示“0 克”），
 	// 服务端无法把重量插到句子中间。想让重量紧跟鱼名，只能把鱼名放到句尾：
-	//   "这都能跑！你的 稀有 丁鱵" + 客户端追加 " 1.5 千克"
-	text := "你的 " + tier + name + "，跑掉了，" + taunt + "！"
+	//   "这都能跑!Редкая 丁鱵" + 客户端追加 " 1.5 千克"
+	text := "" + tier + name + " сорвалась! " + taunt + "!"
 	sess.pushChatProbe(27, 3, "", fishTVKv(text, weight))
 }
 
