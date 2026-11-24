@@ -76,6 +76,10 @@ func NewLoginServer(cfg config.Gateway, store Store, log *slog.Logger, obs *metr
 	if storage, ok := store.(*SQLiteStore); ok {
 		accountPortal := portal.New(storage.DB, s.useridForRemote)
 		s.handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/account/") {
+				s.handleAccount(w, r, storage)
+				return
+			}
 			if strings.HasPrefix(r.URL.Path, "/portal/") {
 				accountPortal.ServeHTTP(w, r)
 				return
@@ -174,11 +178,19 @@ func (s *LoginServer) Shutdown(ctx context.Context) error {
 func (s *LoginServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 	loginRequests.Inc()
 	_ = r.Body.Close()
-	// 客户端登录不发送账号凭据；本机固定 userid，其他来源 IP 分配独立 userid，
-	// 这样同一台机器重登档案连续，Radmin/局域网多客户端也能各自有账号。
-	userid := s.useridForRemote(r.RemoteAddr)
+	// Если клиент передал сохранённый аккаунтный logintoken, сохраняем его UID.
+	// IP используется только для старого режима совместимости без аккаунта.
+	userid := int64(0)
+	if supplied := strings.TrimSpace(r.URL.Query().Get("token")); supplied != "" {
+		if info, found, err := s.store.LookupToken(r.Context(), supplied); err == nil && found && info.Userid > 0 {
+			userid = info.Userid
+		}
+	}
 	if userid <= 0 {
-		userid, _ = s.nextUserid(r.Context())
+		userid = s.useridForRemote(r.RemoteAddr)
+		if userid <= 0 {
+			userid, _ = s.nextUserid(r.Context())
+		}
 	}
 	info := TokenInfo{Userid: userid, IssuedAt: time.Now().Unix(), Region: s.cfg.Region}
 	ttl := time.Duration(s.cfg.TokenTTL) * 24 * time.Hour
@@ -212,8 +224,14 @@ func (s *LoginServer) handleLogin(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
-		// HTTPS 作者通道继续使用 4 段 logintoken。
+		// HTTPS 作者通道继续使用 4 段 logintoken；同时登记它，供 realtime 严格校验。
 		logintoken = NewLogintoken(userid)
+		if err := s.store.SaveToken(r.Context(), logintoken, info, ttl); err != nil {
+			loginErrors.Inc()
+			s.log.Error("保存登录 token 失败", "err", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
 		xml = fmt.Sprintf(loginXMLTpl,
 			s.cfg.AdvertiseHost, s.cfg.AdvertisePort,
 			s.cfg.Region, s.cfg.ServerName, userid,
