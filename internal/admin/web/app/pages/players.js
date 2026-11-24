@@ -122,13 +122,13 @@ function profile(p, reload, setDirty) {
   const seg = segmented([['0', 'Обычная'], ['1', 'Подписка на ограниченный срок'], ['2', 'Постоянная подписка']], String(p.membership || 0), (v) => { memberField.input.value = v; expWrap.hidden = v !== '1'; form.refresh(); });
   const hh = p.happy_hour || {};
   const hhText = hh.enabled === false ? '«Счастливые часы» отключены в разделе «Правила игры».' : !hh.qualified ? 'Бонусы «Счастливых часов» доступны при активной подписке.'
-    : hh.unlimited ? 'Постоянная подписка，Счастливые часы一直有效。' : `«Счастливые часы» активны ещё примерно ${Math.ceil((hh.remaining_seconds || 0) / 60)} мин.`;
+    : hh.unlimited ? 'Постоянная подписка: «Счастливые часы» действуют без ограничений.' : `«Счастливые часы» активны ещё примерно ${Math.ceil((hh.remaining_seconds || 0) / 60)} мин.`;
   return h('div', { class: 'stack', style: { paddingTop: '4px' } },
     h('div', {},
       h('h3', { class: 'small', style: { color: 'var(--muted)', margin: '4px 0 4px' }, text: 'Персонаж' }),
       form.row({ key: 'name', label: 'Имя персонажа', kind: 'string', required: true }, p.name),
       form.row({ key: 'level', label: 'Уровень', kind: 'int', min: 1, max: 58, unit: 'ур.' }, p.level),
-      form.row({ key: 'xp', label: 'Опыт', kind: 'int', min: 0, help: 'Уровень和经验要对得上，否则游戏里经验条会显示异常。' }, p.xp)),
+      form.row({ key: 'xp', label: 'Опыт', kind: 'int', min: 0, help: 'Уровень и опыт должны соответствовать друг другу, иначе шкала опыта в игре будет отображаться неверно.' }, p.xp)),
     h('div', {},
       h('h3', { class: 'small', style: { color: 'var(--muted)', margin: '8px 0 4px' }, text: 'Валюта' }),
       form.row({ key: 'silver', label: 'Серебро', kind: 'float', min: 0, help: 'Введите значение так, как оно отображается в игре; допускаются два знака после запятой.' }, cents(p.silver)),
@@ -191,7 +191,7 @@ function addFish(p, reload) {
     const q = speciesInput.value.trim();
     if (!q) { results.replaceChildren(); return; }
     const list = await apiList('/api/fish/pool?limit=30&q=' + encodeURIComponent(q)).catch(() => []);
-    results.replaceChildren(list.length ? h('div', { class: 'list' }, list.map((f) => h('div', { class: 'list-item clickable', onclick: () => { speciesInput.value = f.fish_key; hint.textContent = `${f.name_zh}，常见 ${fmt(f.min_g)}–${fmt(f.max_g)} g`; results.replaceChildren(); } },
+    results.replaceChildren(list.length ? h('div', { class: 'list' }, list.map((f) => h('div', { class: 'list-item clickable', onclick: () => { speciesInput.value = f.fish_key; hint.textContent = `${f.name_zh}, обычный вес ${fmt(f.min_g)}–${fmt(f.max_g)} г`; results.replaceChildren(); } },
       h('div', { class: 'grow' }, h('div', { class: 'title', text: f.name_zh }), h('div', { class: 'sub mono', text: f.fish_key })), h('span', { class: 'muted small', text: `${fmt(f.min_g)}–${fmt(f.max_g)} g` })))) : empty('Ничего не найдено', 'Попробуйте другое название рыбы или ID.'));
   }, 250));
   dialog({
@@ -199,8 +199,8 @@ function addFish(p, reload) {
     body: h('div', { class: 'stack' }, species, results, hint, h('div', { class: 'form-grid' },
       form.stacked({ key: 'weight_g', label: 'Вес (г)', kind: 'int', min: 1 }, '500'),
       form.stacked({ key: 'cat', label: 'Категория', kind: 'select', options: [['1', 'Обычная'], ['2', 'Зачётная'], ['3', 'Трофей'], ['4', 'Голубая корона']] }, '1'),
-      form.stacked({ key: 'keep_level', label: 'Место (необязательно）', kind: 'string', placeholder: '例如 level_001_lake' }, ''),
-      form.stacked({ key: 'keep_bait', label: 'Использованная наживка (необязательно）', kind: 'string', placeholder: '例如 worm_01' }, ''))),
+      form.stacked({ key: 'keep_level', label: 'Место (необязательно）', kind: 'string', placeholder: 'Например, level_001_lake' }, ''),
+      form.stacked({ key: 'keep_bait', label: 'Использованная наживка (необязательно）', kind: 'string', placeholder: 'Например, worm_01' }, ''))),
     actions: [{ label: 'Отмена', kind: 'ghost' }, {
       label: 'Добавить', kind: 'primary', onClick: async () => {
         if (!form.validate(['species', 'weight_g'])) return true;
@@ -222,7 +222,7 @@ function records(p, reload, setDirty) {
     saveBtn.disabled = true;
     try {
       const r = await post('/api/players/records', { uid: p.uid, level, changes: [...changes.values()] });
-      toast('Сохранено，并Автоматически备份了存档（' + r.backup + '）');
+      toast('Сохранено. Резервная копия сохранения: ' + r.backup + '）');
       changes.clear(); await load(level);
     } catch (e) { toast(errText(e), 'bad'); saveBtn.disabled = false; }
   }, 'primary', { disabled: true });
@@ -251,10 +251,10 @@ function records(p, reload, setDirty) {
     }));
     rows();
     box.replaceChildren(h('div', { class: 'stack' },
-      callout('info', '用于补齐图鉴。补录算一次钓获，但不给经验、Валюта，也不放进Садок。真实钓到的记录不会被覆盖。Сохранить前会Автоматически备份存档。建议在Игроки下线时补录。'),
+      callout('info', 'Используется для заполнения энциклопедии. Запись учитывается как улов, но не даёт опыт или валюту и не добавляется в садок. Реальные уловы не перезаписываются. Перед сохранением создаётся резервная копия. Рекомендуется делать это, когда игрок не в сети.'),
       h('div', { class: 'row' }, mapSel, h('div', { class: 'grow' }, searchBox('Фильтр по названию рыбы', (v) => { q = v.toLowerCase(); rows(); })), saveBtn),
       h('div', { class: 'table-wrap', style: { maxHeight: '58vh' } }, h('table', { class: 'table' },
-        h('thead', {}, h('tr', {}, h('th', { text: 'Рыба' }), h('th', { text: 'Сейчас' }), h('th', { class: 'num', text: 'Максимальный вес' }), h('th', { text: 'Установить статус' }), h('th', { text: '补录Вес (г)' }))), tbody))));
+        h('thead', {}, h('tr', {}, h('th', { text: 'Рыба' }), h('th', { text: 'Сейчас' }), h('th', { class: 'num', text: 'Максимальный вес' }), h('th', { text: 'Установить статус' }), h('th', { text: 'Добавленный вес (г)' }))), tbody))));
   }
   load('');
   return box;
@@ -270,7 +270,7 @@ function skills(p, reload, setDirty) {
   const points = h('input', { class: 'input num', style: { width: '100px' }, value: avail, oninput: () => { unsaved.add('points'); } });
   return h('div', { class: 'stack' },
     h('div', { class: 'card', style: { padding: '14px 16px', background: 'var(--surface-2)' } }, h('div', { class: 'row' },
-      h('div', { class: 'grow' }, h('b', { text: 'Нераспределённые очки навыков' }), h('div', { class: 'muted small', text: `Уровень累计获得 ${p.skill_total ?? 0} 点，已经用掉 ${p.skill_spent ?? 0} 点。` })),
+      h('div', { class: 'grow' }, h('b', { text: 'Нераспределённые очки навыков' }), h('div', { class: 'muted small', text: `Всего получено очков навыков: ${p.skill_total ?? 0}, использовано: ${p.skill_spent ?? 0}.` })),
       points, btn('Сохранить', async () => {
         try { await post('/api/players/skills/points', { uid: p.uid, points: Math.max(0, Math.floor(+points.value || 0)) }); unsaved.delete('points'); toast('Сохранено'); } catch (e) { toast(errText(e), 'bad'); }
       }, 'primary sm'))),
@@ -288,7 +288,7 @@ function skills(p, reload, setDirty) {
     })),
     h('div', {}, btn('Сбросить всё', async () => {
       if (!(await confirmDialog({ title: 'Сбросить освоенность всех способов ловли?', desc: '所有钓法的熟练度都会变成 0%，Это действие нельзя отменить.', confirm: 'Сбросить', danger: true }))) return;
-      try { for (const s of list) await post('/api/players/skills/update', { uid: p.uid, skill_id: s.skill_id, points: 0 }); unsaved.clear(); toast('已Сбросить'); reload(); } catch (e) { toast(errText(e), 'bad'); }
+      try { for (const s of list) await post('/api/players/skills/update', { uid: p.uid, skill_id: s.skill_id, points: 0 }); unsaved.clear(); toast('Сброшено'); reload(); } catch (e) { toast(errText(e), 'bad'); }
     }, 'danger sm')));
 }
 
