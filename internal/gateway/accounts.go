@@ -74,33 +74,30 @@ func (s *LoginServer) registerAccount(w http.ResponseWriter, r *http.Request, db
 		return
 	}
 	defer tx.Rollback()
-	// UID выдаётся сервером из монотонного счётчика. Он не уменьшается
-	// после удаления аккаунта и не зависит от IP/компьютера игрока.
+	// UID назначается сервером: после удаления профиля освободившиеся номера
+	// переиспользуются, начиная с наименьшего свободного UID.
 	if _, err = tx.ExecContext(r.Context(), `
 		INSERT OR IGNORE INTO player_uid_seq(id, next_uid) VALUES(1, 1000001)`); err != nil {
 		writeAccountJSON(w, http.StatusInternalServerError, accountResponse{Error: "account creation failed"})
 		return
 	}
-	if _, err = tx.ExecContext(r.Context(), `
-		UPDATE player_uid_seq
-		SET next_uid = CASE
-			WHEN next_uid <= COALESCE((SELECT MAX(uid) FROM profile), 1000000)
-			THEN COALESCE((SELECT MAX(uid) FROM profile), 1000000) + 1
-			WHEN next_uid <= COALESCE((SELECT MAX(uid) FROM player_account), 1000000)
-			THEN COALESCE((SELECT MAX(uid) FROM player_account), 1000000) + 1
-			ELSE next_uid
-		END
-		WHERE id=1`); err != nil {
-		writeAccountJSON(w, http.StatusInternalServerError, accountResponse{Error: "account creation failed"})
-		return
-	}
 	var uid int64
-	if err = tx.QueryRowContext(r.Context(), `SELECT next_uid FROM player_uid_seq WHERE id=1`).Scan(&uid); err != nil {
-		writeAccountJSON(w, http.StatusInternalServerError, accountResponse{Error: "account creation failed"})
-		return
+	for uid = 1000001; ; uid++ {
+		var occupied int
+		if err = tx.QueryRowContext(r.Context(), `SELECT
+			EXISTS(SELECT 1 FROM profile WHERE uid=?) OR
+			EXISTS(SELECT 1 FROM player_account WHERE uid=?)`, uid, uid).Scan(&occupied); err != nil {
+			writeAccountJSON(w, http.StatusInternalServerError, accountResponse{Error: "account creation failed"})
+			return
+		}
+		if occupied == 0 { break }
+		if uid == int64(^uint64(0)>>1) {
+			writeAccountJSON(w, http.StatusInternalServerError, accountResponse{Error: "UID space exhausted"})
+			return
+		}
 	}
-	if _, err = tx.ExecContext(r.Context(), `UPDATE player_uid_seq SET next_uid=next_uid+1 WHERE id=1`); err != nil {
-		writeAccountJSON(w, http.StatusInternalServerError, accountResponse{Error: "account creation failed"})
+	if _, err = tx.ExecContext(r.Context(), `UPDATE player_uid_seq SET next_uid=MAX(next_uid, ?+1) WHERE id=1`, uid); err != nil {
+		writeAccountJSON(w, http.StatusInternalServerError, accountResponse{Error: "account sequence update failed"})
 		return
 	}
 	if _, err = tx.ExecContext(r.Context(),
