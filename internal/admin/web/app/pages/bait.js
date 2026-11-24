@@ -1,8 +1,8 @@
 // Предпочтения рыб по наживкам：Что ест каждый вид рыбы и чего избегает; предпочтения можно менять по расписанию.
 import { h, api, toast, errText, pageHead, callout, badge, btn, empty, loading, searchBox, debounce, drawer, dialog, confirmDialog, segmented, toggleEl, icon } from '../core.js';
 
-const DIET = [['lure', 'Искусственные приманки'], ['worm', '蠕虫'], ['fish', 'Рыбная наживка'], ['boilie', '煮Наживка'], ['plant', '植物'], ['crustacean', '甲壳类']];
-const WILDCARD = [['各类Наживка', 'Все наживки'], ['Искусственные приманки', '所有Искусственные приманки'], ['活Наживка类', 'Все живые наживки'], ['Рыбная наживка类', '所有Рыбная наживка']];
+const DIET = [['lure', 'Искусственные приманки'], ['worm', 'Черви'], ['fish', 'Рыбная наживка'], ['boilie', 'Бойлы'], ['plant', 'Растительные наживки'], ['crustacean', 'Ракообразные']];
+const WILDCARD = [['Все виды наживки', 'Все наживки'], ['Искусственные приманки', 'Все искусственные приманки'], ['Живые наживки', 'Все живые наживки'], ['Рыбная наживка类', 'Вся рыбная наживка']];
 let Q = '', LOC = '', FILTER = 'all';
 
 const put = (path, body) => api(path, { method: 'PUT', body: JSON.stringify(body) });
@@ -26,20 +26,20 @@ export default async function bait() {
     const list = rows.filter((r) => FILTER === 'all' || (FILTER === 'rule' && r.has_rule) || (FILTER === 'none' && !r.has_rule) || (FILTER === 'edited' && r.source === 'override'));
     count.textContent = `${list.length} видов рыб`;
     tbody.replaceChildren(...(list.length ? list.map((r) => h('tr', { style: { cursor: 'pointer' }, onclick: () => editFish(r, load) },
-      h('td', {}, h('b', { text: r.name_zh }), h('span', { class: 'sub', text: (r.locs || []).slice(0, 3).join('、') + ((r.locs || []).length > 3 ? ' 等' : '') })),
+      h('td', {}, h('b', { text: r.name_zh }), h('span', { class: 'sub', text: (r.locs || []).slice(0, 3).join(' / ') + ((r.locs || []).length > 3 ? ' и ещё ' : '') })),
       h('td', { style: { whiteSpace: 'normal', maxWidth: '460px' } }, r.has_rule
-        ? h('div', { class: 'small' }, chipsInline(r.allow), (r.deny || []).length ? h('div', { class: 'muted', text: 'Не ест: ' + r.deny.join('、') }) : null)
+        ? h('div', { class: 'small' }, chipsInline(r.allow), (r.deny || []).length ? h('div', { class: 'muted', text: 'Не ест: ' + r.deny.join(' / ') }) : null)
         : h('span', { class: 'muted small', text: 'Не задано. Решение принимается по фактическим данным улова.' })),
-      h('td', {}, r.diet ? (r.lure_ok ? badge('Да', 'ok') : badge('不Да')) : h('span', { class: 'muted', text: '—' })),
+      h('td', {}, r.diet ? (r.lure_ok ? badge('Да', 'ok') : badge('Нет')) : h('span', { class: 'muted', text: '—' })),
       h('td', {}, layerBar(r.layer, 120)),
-      h('td', {}, r.source === 'override' ? (r.enabled ? badge('改过', 'warn') : badge('Изменено · отключено')) : h('span', { class: 'muted small', text: '默认' }),
-        r.rotation && r.rotation.enabled ? badge('Ротация включена', 'accent') : null))) : [h('tr', {}, h('td', { colspan: 5 }, empty('没有符合条件的Рыба')))]));
+      h('td', {}, r.source === 'override' ? (r.enabled ? badge('Изменено', 'warn') : badge('Изменено · отключено')) : h('span', { class: 'muted small', text: 'По умолчанию' }),
+        r.rotation && r.rotation.enabled ? badge('Ротация включена', 'accent') : null))) : [h('tr', {}, h('td', { colspan: 5 }, empty('Подходящие виды рыб не найдены')))]));
   }
   load();
   const locSel = h('select', { class: 'select', style: { width: '180px' }, onchange: (e) => { LOC = e.target.value; load(); } },
     h('option', { value: '', text: 'Все водоёмы' }), (Array.isArray(areas) ? areas : []).map((a) => h('option', { value: a.loc, text: a.loc, selected: a.loc === LOC })));
   return h('div', { class: 'page' },
-    pageHead('Предпочтения рыб по наживкам', '每видов рыбПредпочитает什么、不吃什么。点一видов рыб查看和修改。需要在「Правила игры」里打开「РыбаДа挑Наживка」才生效。'),
+    pageHead('Предпочтения рыб по наживкам', 'Что предпочитает каждый вид рыбы и чего избегает. Выберите вид, чтобы просмотреть и изменить настройки. Для работы включите правило «Рыба выбирает наживку» в разделе «Правила игры».'),
     banner,
     h('div', { class: 'card card-pad' },
       h('div', { class: 'row', style: { marginBottom: '14px' } },
@@ -48,13 +48,13 @@ export default async function bait() {
         segmented([['all', 'Все'], ['rule', 'Настроено'], ['none', 'Не настроено'], ['edited', 'Изменено мной']], FILTER, (v) => { FILTER = v; draw(); }),
         h('span', { class: 'spacer' }), count),
       h('div', { class: 'table-wrap', style: { maxHeight: 'calc(100vh - 260px)' } }, h('table', { class: 'table' },
-        h('thead', {}, h('tr', {}, h('th', { text: 'Рыба' }), h('th', { text: 'Предпочитает' }), h('th', { text: '咬Искусственные приманки' }), h('th', { text: 'Рабочий горизонт' }), h('th', { text: 'Статус' }))), tbody))));
+        h('thead', {}, h('tr', {}, h('th', { text: 'Рыба' }), h('th', { text: 'Предпочитает' }), h('th', { text: 'Клюёт на искусственные приманки' }), h('th', { text: 'Рабочий горизонт' }), h('th', { text: 'Статус' }))), tbody))));
 }
 
 function chipsInline(list) {
   const l = list || [];
   if (!l.length) return h('span', { class: 'muted', text: '—' });
-  return h('span', { text: l.slice(0, 6).join('、') + (l.length > 6 ? ` 等 ${l.length} 种` : '') });
+  return h('span', { text: l.slice(0, 6).join(' / ') + (l.length > 6 ? ` и ещё  ${l.length} 种` : '') });
 }
 // 水层条：左水面右水底，色块是活动范围，竖线是最爱的深度
 function layerBar(layer, width = 200) {
@@ -69,13 +69,13 @@ function editFish(r, reload) {
   const st = {
     allow: [...(r.allow || [])], deny: [...(r.deny || [])], bottom: [...(r.bottom_only || [])],
     groups: (r.groups || []).map((g) => [...g]), sec: r.rotate_sec || 0, mode: r.rotate_mode || 'soft',
-    enabled: r.source === 'override' ? !!r.enabled : true, cond: r.condition && r.condition !== '无' ? r.condition : '',
+    enabled: r.source === 'override' ? !!r.enabled : true, cond: r.condition && r.condition !== 'Нет' ? r.condition : '',
   };
   const snapshot = () => JSON.stringify(st);
   const initial = snapshot();
   const body = h('div');
   const chipList = (arr) => h('div', { class: 'row', style: { gap: '6px' } }, arr.length ? arr.map((v, i) => h('span', { class: 'badge', style: { paddingRight: '4px' } }, v,
-    h('button', { type: 'button', 'aria-label': '移除 ' + v, style: { border: 0, background: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '0 2px', display: 'grid' }, onclick: () => { arr.splice(i, 1); draw(); } }, icon('x', 12))))
+    h('button', { type: 'button', 'aria-label': 'Удалить ' + v, style: { border: 0, background: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '0 2px', display: 'grid' }, onclick: () => { arr.splice(i, 1); draw(); } }, icon('x', 12))))
     : h('span', { class: 'muted small', text: '（空）' }));
   const bucket = (title, help, arr) => h('div', { style: { padding: '12px 0', borderTop: '1px solid var(--line)' } },
     h('div', { class: 'row', style: { justifyContent: 'space-between', marginBottom: '6px' } }, h('div', {}, h('b', { text: title }), help ? h('div', { class: 'muted small', text: help }) : null),
@@ -89,8 +89,8 @@ function editFish(r, reload) {
       bucket('不吃', '用这些Наживка钓不到它。', st.deny),
       bucket('底钓时只吃', '底钓时只认这些Наживка。留空表示不限制。', st.bottom),
       h('h3', { style: { fontSize: '14px', margin: '22px 0 2px' }, text: '定时轮换' }),
-      h('p', { class: 'muted small', style: { marginBottom: '8px' }, text: '让它在不同时段Предпочитает不同的Наживка。至少两组、间隔大于 0 才Да轮换。' }),
-      rot.enabled ? callout('info', `正在轮换：第 ${rot.active + 1}/${rot.total} 组（${(rot.active_baits || []).join('、')}）`) : null,
+      h('p', { class: 'muted small', style: { marginBottom: '8px' }, text: '让它在不同时段Предпочитает不同的Наживка。至少两组 / 间隔大于 0 才Да轮换。' }),
+      rot.enabled ? callout('info', `正在轮换：第 ${rot.active + 1}/${rot.total} 组（${(rot.active_baits || []).join(' / ')}）`) : null,
       ...st.groups.map((g, i) => h('div', { style: { padding: '10px 0', borderTop: '1px solid var(--line)' } },
         h('div', { class: 'row', style: { justifyContent: 'space-between', marginBottom: '6px' } }, h('b', { class: 'small', text: '第 ' + (i + 1) + ' 组' }),
           h('div', { class: 'row' }, btn('添加', () => pickBait('第 ' + (i + 1) + ' 组', (name) => { if (!g.includes(name)) g.push(name); draw(); }), 'sm', { icon: 'plus' }),
@@ -104,7 +104,7 @@ function editFish(r, reload) {
           h('div', { class: 'help', text: '宽松：Другое组的Наживка也能钓到，只是少。严格：只认Текущий режим这组。' }))),
       h('h3', { style: { fontSize: '14px', margin: '22px 0 8px' }, text: 'Другое' }),
       h('div', { class: 'field' }, h('label', { text: '前置条件（可选）' }), h('input', { class: 'input', value: st.cond, placeholder: '例如 海图 120 号区域', oninput: (e) => { st.cond = e.target.value.trim(); } })),
-      h('div', { style: { marginTop: '12px' } }, toggleEl({ checked: st.enabled, label: '使用我的设置（关闭则用默认Правила）', onChange: (v) => { st.enabled = v; } })),
+      h('div', { style: { marginTop: '12px' } }, toggleEl({ checked: st.enabled, label: '使用我的设置（关闭则用По умолчаниюПравила）', onChange: (v) => { st.enabled = v; } })),
       habits(r)].filter(Boolean));
   }
   draw();
@@ -140,9 +140,9 @@ function habits(r) {
   });
   return h('details', { class: 'advanced', style: { marginTop: '22px' } }, h('summary', {}, '这видов рыб的习性 ', h('small', { text: '（参考数据，只读）' })),
     h('div', { class: 'stack', style: { paddingTop: '12px' } },
-      h('div', {}, h('div', { class: 'small text-2', style: { marginBottom: '6px' }, text: r.lure_ok ? 'Да咬Искусственные приманки。' : '不咬Искусственные приманки。' }), h('div', { class: 'stack', style: { gap: '5px' } }, bars)),
+      h('div', {}, h('div', { class: 'small text-2', style: { marginBottom: '6px' }, text: r.lure_ok ? 'ДаКлюёт на искусственные приманки。' : '不Клюёт на искусственные приманки。' }), h('div', { class: 'stack', style: { gap: '5px' } }, bars)),
       h('div', {}, h('div', { class: 'small text-2', style: { marginBottom: '6px' }, text: 'Рабочий горизонт（左边水面，右边水底，白线是最爱的深度）' }), layerBar(r.layer, 320)),
-      (r.baits || []).length ? h('div', { class: 'small muted', text: '实际钓获最多的Наживка：' + r.baits.slice(0, 8).map((b) => b.bait_id).join('、') }) : null,
+      (r.baits || []).length ? h('div', { class: 'small muted', text: '实际钓获最多的Наживка：' + r.baits.slice(0, 8).map((b) => b.bait_id).join(' / ') }) : null,
       r.qual_g ? h('div', { class: 'small muted', text: `Зачётная约 ${r.qual_g} g${r.trophy_g ? `，Трофей约 ${r.trophy_g} g` : ''}。` }) : null));
 }
 
