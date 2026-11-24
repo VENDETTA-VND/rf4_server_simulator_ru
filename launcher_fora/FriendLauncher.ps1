@@ -10,6 +10,25 @@ $script:HostsPath = Join-Path $env:SystemRoot 'System32\drivers\etc\hosts'
 $script:Domains = @('api.rf4game.ru', 'api.rf4game.com')
 $script:Marker = '# rf4-friend-launcher'
 
+function Protect-LauncherPassword {
+    param([string]$Password)
+    if ([string]::IsNullOrEmpty($Password)) { return '' }
+    ConvertTo-SecureString -String $Password -AsPlainText -Force |
+        ConvertFrom-SecureString
+}
+function Unprotect-LauncherPassword {
+    param([string]$ProtectedPassword)
+    if ([string]::IsNullOrEmpty($ProtectedPassword)) { return '' }
+    try {
+        $secure = ConvertTo-SecureString -String $ProtectedPassword
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+        try { return [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
+        finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+    } catch {
+        return ''
+    }
+}
+
 # Поднимаем права до показа окна, иначе запись hosts завершится отказом в доступе.
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = New-Object Security.Principal.WindowsPrincipal($identity)
@@ -19,13 +38,16 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     exit
 }
 
-$script:Cfg = @{ server_ip = ''; game_path = ''; game_region = 'CN' }
+$script:Cfg = @{ server_ip = ''; game_path = ''; game_region = 'CN'; account_username = ''; account_password_protected = ''; account_uid = 0 }
 if (Test-Path $script:ConfigPath) {
     try {
         $loaded = Get-Content -LiteralPath $script:ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
         if ($loaded.server_ip) { $script:Cfg.server_ip = [string]$loaded.server_ip }
         if ($loaded.game_path) { $script:Cfg.game_path = [string]$loaded.game_path }
         if ($loaded.game_region) { $script:Cfg.game_region = [string]$loaded.game_region }
+        if ($loaded.account_username) { $script:Cfg.account_username = [string]$loaded.account_username }
+        if ($loaded.account_password_protected) { $script:Cfg.account_password_protected = [string]$loaded.account_password_protected }
+        if ($loaded.account_uid) { $script:Cfg.account_uid = [int64]$loaded.account_uid }
     } catch { [System.Windows.Forms.MessageBox]::Show("Не удалось прочитать config.json: $($_.Exception.Message)", 'RF4 Friend Launcher') | Out-Null }
 }
 
@@ -34,6 +56,23 @@ function Save-Config {
     $script:Cfg.game_path = $gameBox.Text.Trim()
     $script:Cfg.game_region = $regionBox.Text.Trim()
     $script:Cfg | ConvertTo-Json | Set-Content -LiteralPath $script:ConfigPath -Encoding UTF8
+}
+function Save-AccountCredentials {
+    param([long]$UID)
+    $script:Cfg.account_username = $usernameBox.Text.Trim()
+    $script:Cfg.account_password_protected = Protect-LauncherPassword -Password $passwordBox.Text
+    $script:Cfg.account_uid = $UID
+    Save-Config
+}
+function Load-SavedAccount {
+    if ($script:Cfg.account_username) { $usernameBox.Text = $script:Cfg.account_username }
+    if ($script:Cfg.account_password_protected) {
+        $saved = Unprotect-LauncherPassword -ProtectedPassword $script:Cfg.account_password_protected
+        if ($saved) { $passwordBox.Text = $saved }
+    }
+    if ([int64]$script:Cfg.account_uid -gt 0) {
+        $uidLabel.Text = "UID: $($script:Cfg.account_uid)"
+    }
 }
 function Save-GameSession {
     param([string]$Username, [string]$LoginToken, [long]$TokenTimestamp)
@@ -80,8 +119,9 @@ function Invoke-AccountAction {
         throw 'Сервер не выдал игровой токен.'
     }
     Save-GameSession -Username $username -LoginToken ([string]$result.login_token) -TokenTimestamp ([long]$result.token_timestamp)
-    $passwordBox.Clear()
-    $statusLabel.Text = "Аккаунт '$username' авторизован (UID $($result.uid)); токен сохранён."
+    Save-AccountCredentials -UID ([long]$result.uid)
+    $uidLabel.Text = "UID: $($result.uid)"
+    $statusLabel.Text = "Аккаунт '$username' авторизован (UID $($result.uid)); данные сохранены."
 }
 function Get-HostsTextInfo {
     if (-not (Test-Path -LiteralPath $script:HostsPath)) { throw "Не найден hosts: $script:HostsPath" }
@@ -219,6 +259,19 @@ $loginButton.Text = 'Войти в аккаунт'
 $loginButton.Location = New-Object System.Drawing.Point(300, 137)
 $loginButton.Size = New-Object System.Drawing.Size(240, 25)
 $form.Controls.Add($loginButton)
+$rememberLabel = New-Object System.Windows.Forms.Label
+$rememberLabel.Text = 'Пароль хранится зашифрованным для этого пользователя Windows'
+$rememberLabel.Location = New-Object System.Drawing.Point(110, 164)
+$rememberLabel.Size = New-Object System.Drawing.Size(430, 22)
+$rememberLabel.Font = New-Object System.Drawing.Font('Segoe UI', 8)
+$rememberLabel.ForeColor = [System.Drawing.Color]::FromArgb(90, 100, 115)
+$form.Controls.Add($rememberLabel)
+$uidLabel = New-Object System.Windows.Forms.Label
+$uidLabel.Text = 'UID: —'
+$uidLabel.Location = New-Object System.Drawing.Point(25, 355)
+$uidLabel.Size = New-Object System.Drawing.Size(220, 24)
+$uidLabel.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 9)
+$form.Controls.Add($uidLabel)
 $serverButton = New-Object System.Windows.Forms.Button
 $serverButton.Text = 'Играть на моём сервере'
 $serverButton.Location = New-Object System.Drawing.Point(25, 165)
@@ -271,8 +324,8 @@ $form.Controls.Add($launchButton)
 
 $statusLabel = New-Object System.Windows.Forms.Label
 $statusLabel.Text = 'Режим: не выбран (системный hosts не изменён)'
-$statusLabel.Location = New-Object System.Drawing.Point(25, 355)
-$statusLabel.Size = New-Object System.Drawing.Size(535, 55)
+$statusLabel.Location = New-Object System.Drawing.Point(250, 355)
+$statusLabel.Size = New-Object System.Drawing.Size(290, 55)
 $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(70, 80, 95)
 $form.Controls.Add($statusLabel)
 
@@ -286,6 +339,7 @@ $registerButton.Add_Click({ try { Invoke-AccountAction -Action 'register' } catc
 $loginButton.Add_Click({ try { Invoke-AccountAction -Action 'login' } catch { [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Вход не выполнен', 'OK', 'Error') | Out-Null } })
 $serverButton.Add_Click({ try { Set-ServerHosts } catch { [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Не удалось переключить hosts', 'OK', 'Error') | Out-Null } })
 $officialButton.Add_Click({ try { Set-OfficialHosts } catch { [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Не удалось вернуть официальный режим', 'OK', 'Error') | Out-Null } })
+Load-SavedAccount
 $launchButton.Add_Click({ try { Launch-Game } catch { [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Не удалось запустить игру', 'OK', 'Error') | Out-Null } })
 
 # Показываем активный режим только если найдены именно наши помеченные строки.
