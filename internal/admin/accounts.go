@@ -54,24 +54,50 @@ func (s *Server) handleAccountUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 
-// handleAccountDelete удаляет учетную запись, не затрагивая игровой профиль и его данные.
+// handleAccountDelete удаляет аккаунт вместе с профилем и всеми данными персонажа.
 func (s *Server) handleAccountDelete(w http.ResponseWriter, r *http.Request) {
 	var req struct { UID int64 `json:"uid"` }
-	if err := readJSON(r, &req); err != nil || req.UID <= 0 {
+	if err := readJSON(r, &req); err != nil || req.UID < 1000001 {
 		httpError(w, 400, "неверный UID аккаунта")
 		return
 	}
 	ctx := r.Context()
+	tx, err := s.db.SQL.BeginTx(ctx, nil)
+	if err != nil { httpError(w, 500, "не удалось начать удаление аккаунта"); return }
+	defer tx.Rollback()
+
 	var username string
-	if err := s.db.SQL.QueryRowContext(ctx, "SELECT username FROM player_account WHERE uid=?", req.UID).Scan(&username); err != nil {
+	if err := tx.QueryRowContext(ctx, "SELECT username FROM player_account WHERE uid=?", req.UID).Scan(&username); err != nil {
 		if err == sql.ErrNoRows { httpError(w, 404, "аккаунт не найден"); return }
-		httpError(w, 500, "не удалось прочитать аккаунт")
-		return
+		httpError(w, 500, "не удалось прочитать аккаунт"); return
 	}
-	res, err := s.db.SQL.ExecContext(ctx, "DELETE FROM player_account WHERE uid=?", req.UID)
-	if err != nil { httpError(w, 500, "не удалось удалить аккаунт"); return }
-	n, _ := res.RowsAffected()
-	if n == 0 { httpError(w, 404, "аккаунт не найден"); return }
-	_ = s.db.AuditLogWrite(ctx, adminOf(r), "account_delete", fmt.Sprintf("uid=%d", req.UID), "username="+username)
-	writeJSON(w, map[string]any{"ok": true, "uid": req.UID})
+
+	// Удаляем все строки, принадлежащие UID, из таблиц с явной колонкой uid.
+	tables, err := tx.QueryContext(ctx, `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name`)
+	if err != nil { httpError(w, 500, "не удалось получить список таблиц"); return }
+	var names []string
+	for tables.Next() { var name string; if err := tables.Scan(&name); err != nil { tables.Close(); httpError(w, 500, "не удалось прочитать список таблиц"); return }; names = append(names, name) }
+	if err := tables.Err(); err != nil { tables.Close(); httpError(w, 500, "ошибка чтения списка таблиц"); return }
+	tables.Close()
+
+	for _, name := range names {
+		cols, err := tx.QueryContext(ctx, `SELECT name FROM pragma_table_info(?) WHERE name IN ('uid','userid','user_id')`, name)
+		if err != nil { httpError(w, 500, "не удалось проверить таблицы персонажа"); return }
+		var uidCols []string
+		for cols.Next() { var col string; if err := cols.Scan(&col); err != nil { cols.Close(); httpError(w, 500, "ошибка чтения структуры таблицы"); return }; uidCols = append(uidCols, col) }
+		if err := cols.Err(); err != nil { cols.Close(); httpError(w, 500, "ошибка чтения структуры таблицы"); return }
+		cols.Close()
+		for _, col := range uidCols {
+			if _, err := tx.ExecContext(ctx, `DELETE FROM "`+strings.ReplaceAll(name, "\"", "\"\"")+`" WHERE "`+col+`"=?`, req.UID); err != nil {
+				httpError(w, 500, "не удалось удалить данные персонажа из "+name); return
+			}
+		}
+	}
+
+	if _, err := tx.ExecContext(ctx, "DELETE FROM player_account WHERE uid=?", req.UID); err != nil {
+		httpError(w, 500, "не удалось удалить аккаунт"); return
+	}
+	if err := tx.Commit(); err != nil { httpError(w, 500, "не удалось завершить удаление"); return }
+	_ = s.db.AuditLogWrite(ctx, adminOf(r), "account_delete", fmt.Sprintf("uid=%d", req.UID), "username="+username+"; profile and player data deleted; UID released")
+	writeJSON(w, map[string]any{"ok": true, "uid": req.UID, "username": username, "profile_deleted": true, "uid_released": true})
 }
