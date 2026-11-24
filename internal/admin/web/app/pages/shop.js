@@ -10,7 +10,7 @@ let ONLY_CHANGED = false;
 const STORE_KIND = [
   [/^fishing_?store/, 'Магазин рыболовных товаров'], [/^food_?store/, 'Продуктовый магазин'], [/^tool_store/, 'Магазин инструментов'], [/^workshop/, 'Мастерская'], [/^boatstation/, 'Причал'],
   [/^atm/, 'Банкомат'], [/^admin/, 'Администрация'], [/^monkeycola/, 'Автомат с напитками'], [/^ny_?ba+za+r/i, 'Новогодняя ярмарка'], [/^cafestore/, 'Кафе'],
-  [/^bakery/, 'Пекарня'], [/^craft_baits/, 'Наживка料制作'], [/^craft_lures/, '拟Наживка制作'], [/^farmstore/, 'Фермерский магазин'], [/^fishstore/, 'Рыбный магазин'],
+  [/^bakery/, 'Пекарня'], [/^craft_baits/, 'Изготовление наживки'], [/^craft_lures/, 'Изготовление искусственных приманок'], [/^farmstore/, 'Фермерский магазин'], [/^fishstore/, 'Рыбный магазин'],
   [/^housestore/, 'Магазин домов'], [/^milkstore/, 'Молочный магазин'], [/^sawmill/, 'Лесопилка'], [/^mill/, 'Мельница'], [/^paseka/, 'Пасека'],
   [/^rentbike/, 'Прокат транспорта'], [/^tours/, 'Туристическое агентство'], [/^arbuz/, 'Арбузная лавка'],
 ];
@@ -40,7 +40,7 @@ export default async function shop(params) {
   const root = h('div', { class: 'page' },
     pageHead(cur ? `Магазин · ${mapLabel(cur.map_key)} · ${storeKind(cur.store_id) || cur.store_id}` : 'Магазин', 'Изменяйте цены и остатки товаров. После сохранения изменения вступят в силу сразу. Когда запас закончится, он автоматически пополнится до 1000.'),
     h('div', { class: 'master-detail', style: { gridTemplateColumns: '240px minmax(0,1fr)' } }, side, main));
-  if (!storeId) { main.replaceChildren(h('div', { class: 'card' }, empty('没有Магазин数据'))); return root; }
+  if (!storeId) { main.replaceChildren(h('div', { class: 'card' }, empty('Нет данных о магазинах'))); return root; }
 
   const form = new Form();
   let items = [];
@@ -54,7 +54,7 @@ export default async function shop(params) {
           silver: Math.round(+form.value(id + '|silver') * 100), gold: Math.round(+form.value(id + '|gold') * 100), stock: Math.floor(+form.value(id + '|stock')),
         });
       }
-      toast(`已Сохранить ${touched.size} товаров`);
+      toast(`Сохранено товаров: ${touched.size}`);
       setTimeout(render, 200);
     },
   });
@@ -69,7 +69,7 @@ export default async function shop(params) {
     const input = h('input', { class: 'input num', style: { width: '110px' }, value: f.input ? f.input.value : f.original, placeholder: def, oninput: () => form.refresh() });
     f.input = input;
     f.row = input;
-    return h('td', {}, input, h('span', { class: 'sub', text: '默认 ' + def }));
+    return h('td', {}, input, h('span', { class: 'sub', text: 'По умолчанию: ' + def }));
   };
   const draw = () => {
     const rows = items.filter((x) => !ONLY_CHANGED || x.has_override);
@@ -79,10 +79,10 @@ export default async function shop(params) {
       cell(x, 'silver', money(x.silver), money(x.base_silver)),
       cell(x, 'gold', money(x.gold), money(x.base_gold)),
       cell(x, 'stock', String(x.stock), fmt(x.base_stock)),
-      h('td', {}, x.has_override ? h('div', { class: 'row', style: { flexWrap: 'nowrap' } }, badge('已修改', 'warn'), btn('Восстановить значения по умолчанию', async () => {
-        if (!(await confirmDialog({ title: `把「${x.name || x.item_id}」Восстановить значения по умолчанию？`, desc: 'Цены и остатки вернутся к исходным игровым значениям.', confirm: '恢复' }))) return;
+      h('td', {}, x.has_override ? h('div', { class: 'row', style: { flexWrap: 'nowrap' } }, badge('Изменено', 'warn'), btn('Восстановить значения по умолчанию', async () => {
+        if (!(await confirmDialog({ title: `Восстановить значения по умолчанию для «${x.name || x.item_id}»?`, desc: 'Цены и остатки вернутся к исходным игровым значениям.', confirm: 'Восстановить' }))) return;
         try { await post('/api/stores/items/reset', { store_id: storeId, item_id: x.item_id }); toast('Значения по умолчанию восстановлены'); load(); } catch (e) { toast(errText(e), 'bad'); }
-      }, 'ghost sm')) : null))) : [h('tr', {}, h('td', { colspan: 5 }, empty(Q || ONLY_CHANGED ? 'Подходящие товары не найдены' : '这个Магазин没有Товар')))]));
+      }, 'ghost sm')) : null))) : [h('tr', {}, h('td', { colspan: 5 }, empty(Q || ONLY_CHANGED ? 'Подходящие товары не найдены' : 'В этом магазине нет товаров')))]));
   };
   async function load() {
     try {
