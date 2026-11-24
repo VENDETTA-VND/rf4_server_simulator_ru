@@ -502,7 +502,7 @@ export async function render() {
 window.addEventListener('beforeunload', (e) => { if (guardFn && guardFn()) { e.preventDefault(); e.returnValue = ''; } });
 let lastHash = location.hash;
 window.addEventListener('hashchange', () => {
-  if (guardFn && guardFn() && !confirm('有修改还没保存，Подтвердить离Вкл.吗？')) {
+  if (guardFn && guardFn() && !confirm('Есть несохранённые изменения. Всё равно уйти?')) {
     history.replaceState(null, '', lastHash);
     return;
   }
