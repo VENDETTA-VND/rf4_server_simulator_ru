@@ -75,7 +75,12 @@ func (s *LoginServer) registerAccount(w http.ResponseWriter, r *http.Request, db
 	}
 	defer tx.Rollback()
 	var uid int64
-	if err = tx.QueryRowContext(r.Context(), "SELECT COALESCE(MAX(uid), 1000001) + 1 FROM profile").Scan(&uid); err != nil {
+	if err = tx.QueryRowContext(r.Context(), `
+		SELECT MAX(uid) + 1 FROM (
+			SELECT COALESCE(MAX(uid), 1000001) AS uid FROM profile
+			UNION ALL
+			SELECT COALESCE(MAX(uid), 1000001) AS uid FROM player_account
+		)`, ).Scan(&uid); err != nil {
 		writeAccountJSON(w, http.StatusInternalServerError, accountResponse{Error: "account creation failed"})
 		return
 	}
