@@ -3441,7 +3441,6 @@ func (s *Server) notifyFishLanded(sess *Session, f *RolledFish, newRecord bool) 
 	// k25/k26/k03 是带参数的官方模板播报，依赖 401.f4 模板参数，默认启用。
 	// 管理员显式设置 fish_tv_kv=0 时退化为普通系统文本播报，避免客户端
 	// 解析模板缺参导致断连。
-	kind := fishAnnouncementKind(f.Grade)
 	if text := s.fishLandedText(f, newRecord); text != "" {
 		sess.pushSystemChat(text)
 	}
@@ -3478,7 +3477,27 @@ var escapeTemplateKind = map[string]int{
 	"钓组组件断裂": 10,
 }
 
-// fishEscapeTaunts 跑鱼语气词池：随机抽一条拼进跑鱼提示。
+func escapeReasonRussian(reason string) string {
+	switch reason {
+	case "脱钩离开":
+		return "рыба освободилась от крючка"
+	case "断主线":
+		return "оборвалась основная леска"
+	case "断子线":
+		return "оборвался поводок"
+	case "断竿":
+		return "сломалось удилище"
+	case "渔线轮超载":
+		return "катушка не выдержала перегрузку"
+	case "钓组组件断裂":
+		return "оборвался элемент оснастки"
+	default:
+		if reason == "" { return "рыба сорвалась" }
+		return reason
+	}
+}
+
+// fishEscapeTaunts — варианты русских фраз для сообщений о сходе рыбы.
 var fishEscapeTaunts = []string{
 	"Ну и досада!",
 	"И как только умудрилась сойти?",
@@ -3501,7 +3520,7 @@ func (s *Server) notifyFishEscape(sess *Session, f *RolledFish, reason string) {
 		return
 	}
 	if f == nil || s.tunableF("fish_escape_taunt", 1) == 0 {
-		sess.pushSystemChat(s.fishEscapeText(f, "рыба сорвалась"))
+		sess.pushSystemChat(s.fishEscapeText(f, escapeReasonRussian(reason)))
 		return
 	}
 	name := ""
