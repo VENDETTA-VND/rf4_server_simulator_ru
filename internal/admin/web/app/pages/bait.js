@@ -2,7 +2,7 @@
 import { h, api, toast, errText, pageHead, callout, badge, btn, empty, loading, searchBox, debounce, drawer, dialog, confirmDialog, segmented, toggleEl, icon } from '../core.js';
 
 const DIET = [['lure', 'Искусственные приманки'], ['worm', 'Черви'], ['fish', 'Рыбная наживка'], ['boilie', 'Бойлы'], ['plant', 'Растительные наживки'], ['crustacean', 'Ракообразные']];
-const WILDCARD = [['Все виды наживки', 'Все наживки'], ['Искусственные приманки', 'Все искусственные приманки'], ['Живые наживки', 'Все живые наживки'], ['Рыбная наживка类', 'Вся рыбная наживка']];
+const WILDCARD = [['Все виды наживки', 'Все наживки'], ['Искусственные приманки', 'Все искусственные приманки'], ['Живые наживки', 'Все живые наживки'], ['Рыбная наживка', 'Вся рыбная наживка']];
 let Q = '', LOC = '', FILTER = 'all';
 
 const put = (path, body) => api(path, { method: 'PUT', body: JSON.stringify(body) });
@@ -54,7 +54,7 @@ export default async function bait() {
 function chipsInline(list) {
   const l = list || [];
   if (!l.length) return h('span', { class: 'muted', text: '—' });
-  return h('span', { text: l.slice(0, 6).join(' / ') + (l.length > 6 ? ` и ещё  ${l.length} 种` : '') });
+  return h('span', { text: l.slice(0, 6).join(' / ') + (l.length > 6 ? ` и ещё ${l.length} видов` : '') });
 }
 // 水层条：左水面右水底，色块是活动范围，竖线是最爱的深度
 function layerBar(layer, width = 200) {
@@ -76,35 +76,35 @@ function editFish(r, reload) {
   const body = h('div');
   const chipList = (arr) => h('div', { class: 'row', style: { gap: '6px' } }, arr.length ? arr.map((v, i) => h('span', { class: 'badge', style: { paddingRight: '4px' } }, v,
     h('button', { type: 'button', 'aria-label': 'Удалить ' + v, style: { border: 0, background: 'none', color: 'var(--muted)', cursor: 'pointer', padding: '0 2px', display: 'grid' }, onclick: () => { arr.splice(i, 1); draw(); } }, icon('x', 12))))
-    : h('span', { class: 'muted small', text: '（空）' }));
+    : h('span', { class: 'muted small', text: '(пусто)' }));
   const bucket = (title, help, arr) => h('div', { style: { padding: '12px 0', borderTop: '1px solid var(--line)' } },
     h('div', { class: 'row', style: { justifyContent: 'space-between', marginBottom: '6px' } }, h('div', {}, h('b', { text: title }), help ? h('div', { class: 'muted small', text: help }) : null),
-      btn('添加', () => pickBait(title, (name) => { if (!arr.includes(name)) arr.push(name); draw(); }), 'sm', { icon: 'plus' })),
+      btn('Добавить', () => pickBait(title, (name) => { if (!arr.includes(name)) arr.push(name); draw(); }), 'sm', { icon: 'plus' })),
     chipList(arr));
   function draw() {
     const rot = r.rotation || {};
     body.replaceChildren(...[
-      h('h3', { style: { fontSize: '14px', margin: '0 0 2px' }, text: '吃什么' }),
-      bucket('Предпочитает', '这些Наживка可以钓到它。', st.allow),
-      bucket('不吃', '用这些Наживка钓不到它。', st.deny),
-      bucket('底钓时只吃', '底钓时只认这些Наживка。留空表示不限制。', st.bottom),
-      h('h3', { style: { fontSize: '14px', margin: '22px 0 2px' }, text: '定时轮换' }),
-      h('p', { class: 'muted small', style: { marginBottom: '8px' }, text: '让它在不同时段Предпочитает不同的Наживка。至少两组 / 间隔大于 0 才Да轮换。' }),
-      rot.enabled ? callout('info', `正在轮换：第 ${rot.active + 1}/${rot.total} 组（${(rot.active_baits || []).join(' / ')}）`) : null,
+      h('h3', { style: { fontSize: '14px', margin: '0 0 2px' }, text: 'Что ест' }),
+      bucket('Предпочитает', 'На эту наживку можно поймать данный вид рыбы.', st.allow),
+      bucket('Не ест', 'На эту наживку данный вид рыбы не клюёт.', st.deny),
+      bucket('Для донной ловли предпочитает', 'Для донной ловли подходит только эта наживка. Пустое поле означает отсутствие ограничений.', st.bottom),
+      h('h3', { style: { fontSize: '14px', margin: '22px 0 2px' }, text: 'Ротация по расписанию' }),
+      h('p', { class: 'muted small', style: { marginBottom: '8px' }, text: 'В разное время суток рыба будет предпочитать разные наживки. Для ротации нужны минимум две группы и интервал больше 0.' }),
+      rot.enabled ? callout('info', `Сейчас активна группа ${rot.active + 1}/${rot.total} (${(rot.active_baits || []).join(' / ')})`) : null,
       ...st.groups.map((g, i) => h('div', { style: { padding: '10px 0', borderTop: '1px solid var(--line)' } },
         h('div', { class: 'row', style: { justifyContent: 'space-between', marginBottom: '6px' } }, h('b', { class: 'small', text: '第 ' + (i + 1) + ' 组' }),
-          h('div', { class: 'row' }, btn('添加', () => pickBait('第 ' + (i + 1) + ' 组', (name) => { if (!g.includes(name)) g.push(name); draw(); }), 'sm', { icon: 'plus' }),
+          h('div', { class: 'row' }, btn('Добавить', () => pickBait('第 ' + (i + 1) + ' 组', (name) => { if (!g.includes(name)) g.push(name); draw(); }), 'sm', { icon: 'plus' }),
             btn('', () => { st.groups.splice(i, 1); draw(); }, 'ghost icon sm', { icon: 'trash', 'aria-label': 'Удалить这一组' }))),
         chipList(g))),
-      h('div', { class: 'row', style: { padding: '8px 0' } }, btn('新增一组', () => { if (st.groups.length >= 20) return toast('最多 20 组', 'bad'); st.groups.push([]); draw(); }, 'ghost sm', { icon: 'plus' })),
+      h('div', { class: 'row', style: { padding: '8px 0' } }, btn('Добавить группу', () => { if (st.groups.length >= 20) return toast('Максимум 20 групп', 'bad'); st.groups.push([]); draw(); }, 'ghost sm', { icon: 'plus' })),
       h('div', { class: 'form-grid' },
-        h('div', { class: 'field' }, h('label', { text: '多久换一组' }), h('div', { class: 'input-wrap has-unit', style: { '--unit-w': '2em' } },
-          h('input', { class: 'input num', value: st.sec ? Math.round(st.sec / 60) : 0, oninput: (e) => { st.sec = Math.max(0, Math.round(Number(e.target.value || 0) * 60)); } }), h('span', { class: 'unit', text: '分钟' })), h('div', { class: 'help', text: '0 表示不轮换。' })),
-        h('div', { class: 'field' }, h('span', { class: 'label', text: '轮换方式' }), segmented([['soft', '宽松'], ['strict', '严格']], st.mode, (v) => { st.mode = v; }),
-          h('div', { class: 'help', text: '宽松：Другое组的Наживка也能钓到，只是少。严格：只认Текущий режим这组。' }))),
+        h('div', { class: 'field' }, h('label', { text: 'Интервал смены группы' }), h('div', { class: 'input-wrap has-unit', style: { '--unit-w': '2em' } },
+          h('input', { class: 'input num', value: st.sec ? Math.round(st.sec / 60) : 0, oninput: (e) => { st.sec = Math.max(0, Math.round(Number(e.target.value || 0) * 60)); } }), h('span', { class: 'unit', text: 'мин.' })), h('div', { class: 'help', text: '0 означает, что ротация выключена.' })),
+        h('div', { class: 'field' }, h('span', { class: 'label', text: 'Режим ротации' }), segmented([['soft', 'Мягкий'], ['strict', 'Строгий']], st.mode, (v) => { st.mode = v; }),
+          h('div', { class: 'help', text: 'Мягкий：Другое组的Наживка也能钓到，只是少。Строгий：只认Текущий режим这组。' }))),
       h('h3', { style: { fontSize: '14px', margin: '22px 0 8px' }, text: 'Другое' }),
-      h('div', { class: 'field' }, h('label', { text: '前置条件（可选）' }), h('input', { class: 'input', value: st.cond, placeholder: '例如 海图 120 号区域', oninput: (e) => { st.cond = e.target.value.trim(); } })),
-      h('div', { style: { marginTop: '12px' } }, toggleEl({ checked: st.enabled, label: '使用我的设置（关闭则用По умолчаниюПравила）', onChange: (v) => { st.enabled = v; } })),
+      h('div', { class: 'field' }, h('label', { text: 'Дополнительное условие (необязательно)' }), h('input', { class: 'input', value: st.cond, placeholder: 'Например, морская карта, зона 120', oninput: (e) => { st.cond = e.target.value.trim(); } })),
+      h('div', { style: { marginTop: '12px' } }, toggleEl({ checked: st.enabled, label: 'Использовать мои настройки (иначе применяются настройки по умолчанию)', onChange: (v) => { st.enabled = v; } })),
       habits(r)].filter(Boolean));
   }
   draw();
@@ -112,7 +112,7 @@ function editFish(r, reload) {
     try {
       await put('/api/bait/rules', { fish_zh: r.name_zh, allow: st.allow, deny: st.deny, bottom_only: st.bottom, condition: st.cond,
         groups: st.groups.map((g) => g.filter(Boolean)).filter((g) => g.length), rotate_sec: st.sec, rotate_mode: st.mode, enabled: st.enabled });
-      toast('已Сохранить，约 30 秒内生效');
+      toast('Сохранено. Вступит в силу примерно через 30 секунд.');
       saved = true; d.close(); reload();
     } catch (e) { toast(errText(e), 'bad'); }
   };
@@ -120,10 +120,10 @@ function editFish(r, reload) {
   const d = drawer({
     title: r.name_zh, sub: r.fish_key, body,
     foot: [r.source === 'override' ? btn('Восстановить значения по умолчанию', async () => {
-      if (!(await confirmDialog({ title: `把「${r.name_zh}」Восстановить значения по умолчанию？`, desc: 'Удалить你的设置，回到内置Правила。', confirm: 'Восстановить значения по умолчанию' }))) return;
-      try { await api('/api/bait/rules/reset', { method: 'POST', body: JSON.stringify({ fish_zh: r.name_zh }) }); toast('已Восстановить значения по умолчанию'); saved = true; d.close(); reload(); } catch (e) { toast(errText(e), 'bad'); }
+      if (!(await confirmDialog({ title: `Восстановить настройки для «${r.name_zh}» по умолчанию?`, desc: 'Ваши настройки будут удалены и заменены встроенными правилами.', confirm: 'Восстановить значения по умолчанию' }))) return;
+      try { await api('/api/bait/rules/reset', { method: 'POST', body: JSON.stringify({ fish_zh: r.name_zh }) }); toast('Настройки по умолчанию восстановлены'); saved = true; d.close(); reload(); } catch (e) { toast(errText(e), 'bad'); }
     }, 'ghost') : null, h('span', { class: 'spacer' }), btn('Сохранить', save, 'primary')],
-    onClose: () => { if (!saved && snapshot() !== initial) toast('修改没有Сохранить', 'bad'); },
+    onClose: () => { if (!saved && snapshot() !== initial) toast('Изменения не сохранены', 'bad'); },
   });
 }
 
@@ -136,14 +136,14 @@ function habits(r) {
       h('span', { class: 'muted', style: { width: '52px' }, text: label }),
       h('div', { style: { flex: 1, height: '8px', borderRadius: '4px', background: 'var(--surface-4)', position: 'relative', overflow: 'hidden' } },
         h('div', { style: { position: 'absolute', inset: '0 auto 0 0', width: Math.min(100, v / 2.2 * 100) + '%', background: likes ? 'var(--ok)' : 'var(--faint)', borderRadius: '4px' } })),
-      h('span', { class: likes ? '' : 'muted', style: { width: '56px', textAlign: 'right' }, text: likes ? '喜欢' : '一般' }));
+      h('span', { class: likes ? '' : 'muted', style: { width: '56px', textAlign: 'right' }, text: likes ? 'Предпочитает' : 'Нейтрально' }));
   });
-  return h('details', { class: 'advanced', style: { marginTop: '22px' } }, h('summary', {}, '这видов рыб的习性 ', h('small', { text: '（参考数据，只读）' })),
+  return h('details', { class: 'advanced', style: { marginTop: '22px' } }, h('summary', {}, 'Повадки этого вида рыб ', h('small', { text: '(справочные данные, только чтение)' })),
     h('div', { class: 'stack', style: { paddingTop: '12px' } },
-      h('div', {}, h('div', { class: 'small text-2', style: { marginBottom: '6px' }, text: r.lure_ok ? 'ДаКлюёт на искусственные приманки。' : '不Клюёт на искусственные приманки。' }), h('div', { class: 'stack', style: { gap: '5px' } }, bars)),
-      h('div', {}, h('div', { class: 'small text-2', style: { marginBottom: '6px' }, text: 'Рабочий горизонт（左边水面，右边水底，白线是最爱的深度）' }), layerBar(r.layer, 320)),
-      (r.baits || []).length ? h('div', { class: 'small muted', text: '实际钓获最多的Наживка：' + r.baits.slice(0, 8).map((b) => b.bait_id).join(' / ') }) : null,
-      r.qual_g ? h('div', { class: 'small muted', text: `Зачётная约 ${r.qual_g} g${r.trophy_g ? `，Трофей约 ${r.trophy_g} g` : ''}。` }) : null));
+      h('div', {}, h('div', { class: 'small text-2', style: { marginBottom: '6px' }, text: r.lure_ok ? 'Клюёт на искусственные приманки.' : 'Не клюёт на искусственные приманки.' }), h('div', { class: 'stack', style: { gap: '5px' } }, bars)),
+      h('div', {}, h('div', { class: 'small text-2', style: { marginBottom: '6px' }, text: 'Рабочий горизонт (слева поверхность, справа дно; белая линия — предпочитаемая глубина)' }), layerBar(r.layer, 320)),
+      (r.baits || []).length ? h('div', { class: 'small muted', text: 'Чаще всего использовавшаяся наживка: ' + r.baits.slice(0, 8).map((b) => b.bait_id).join(' / ') }) : null,
+      r.qual_g ? h('div', { class: 'small muted', text: `Зачётный вес — около ${r.qual_g} г${r.trophy_g ? `, трофейный — около ${r.trophy_g} г` : ''}.` }) : null));
 }
 
 // 选Наживка：先选类别，再搜具体的Наживка
@@ -152,7 +152,7 @@ function pickBait(target, onPick) {
   let cat = 27, sub = 0, q = '';
   const results = h('div', { class: 'card', style: { maxHeight: '380px', overflow: 'auto' } });
   const subSel = h('select', { class: 'select', style: { width: '220px' }, onchange: (e) => { sub = Number(e.target.value); load(); } });
-  const input = h('input', { class: 'input', placeholder: 'ПоискНаживка料名称', oninput: debounce((e) => { q = input.value; load(); }, 250) });
+  const input = h('input', { class: 'input', placeholder: 'Поиск по названию наживки', oninput: debounce((e) => { q = input.value; load(); }, 250) });
   const fillSub = () => {
     const node = (CATS || []).find((c) => c.key === cat);
     subSel.replaceChildren(h('option', { value: 0, text: 'Все' }), ...((node && node.children) || []).map((s) => h('option', { value: s.sub, text: `${s.label}（${s.count}）` })));
@@ -171,7 +171,7 @@ function pickBait(target, onPick) {
         h('div', { class: 'grow' }, h('div', { class: 'title', text: x.name_zh || x.item_id }), h('div', { class: 'sub mono', text: x.item_id })), h('span', { class: 'muted small', text: x.sub_label || '' })))) : empty('Ничего не найдено'));
     } catch (e) { results.replaceChildren(empty('Не удалось загрузить', errText(e))); }
   }
-  const seg = segmented([['27', 'Наживка料'], ['17', 'Искусственные приманки'], ['-1', '一整类']], '27', (v) => { cat = Number(v); sub = 0; input.hidden = cat === -1; subSel.hidden = cat === -1; fillSub(); load(); });
-  const { close } = dialog({ title: `添加到「${target}」`, size: 'lg', body: h('div', { class: 'stack' }, h('div', { class: 'row' }, seg, subSel), input, results) });
+  const seg = segmented([['27', 'Наживка'], ['17', 'Искусственные приманки'], ['-1', 'Все категории']], '27', (v) => { cat = Number(v); sub = 0; input.hidden = cat === -1; subSel.hidden = cat === -1; fillSub(); load(); });
+  const { close } = dialog({ title: `Добавить到「${target}」`, size: 'lg', body: h('div', { class: 'stack' }, h('div', { class: 'row' }, seg, subSel), input, results) });
   (CATS ? Promise.resolve() : api('/api/bait/categories').then((d) => { CATS = d.categories || []; }).catch(() => { CATS = []; })).then(() => { fillSub(); load(); });
 }
