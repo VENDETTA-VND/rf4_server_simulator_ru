@@ -1,4 +1,4 @@
-import { h, apiList, post, icon, toast, errText, pageHead, btn, empty, searchBox, debounce, dialog, setPageCleanup } from '../core.js';
+import { h, apiList, post, icon, toast, errText, pageHead, btn, empty, searchBox, debounce, dialog, confirmDialog, setPageCleanup } from '../core.js';
 
 export default async function accounts() {
   const listBox = h('div', { class: 'list' }, h('div', { class: 'empty' }, 'Загрузка…'));
@@ -19,7 +19,7 @@ export default async function accounts() {
           h('td', {}, h('b', { text: a.username })),
           h('td', { class: 'mono', text: String(a.uid) }),
           h('td', { class: 'muted small', text: a.created_ts ? new Date(Number(a.created_ts) * 1000).toLocaleString('ru-RU', { hour12: false }) : '—' }),
-          h('td', { style: { textAlign: 'right' } }, btn('Редактировать', () => editAccount(a), 'sm', { icon: 'edit' }))
+          h('td', { style: { textAlign: 'right' } }, h('div', { class: 'row', style: { justifyContent: 'flex-end' } }, btn('Изменить', () => editAccount(a), 'sm', { icon: 'edit' }), btn('Удалить', () => deleteAccount(a), 'danger sm', { icon: 'trash' })))
         ))))) : empty(query ? 'Аккаунты не найдены' : 'Аккаунтов пока нет', query ? 'Проверьте логин или UID.' : 'После регистрации игрока аккаунт появится здесь.'));
     } catch (e) { listBox.replaceChildren(empty('Ошибка загрузки', errText(e))); }
   }
@@ -69,3 +69,17 @@ window.addEventListener('rf4:accounts-refresh', () => {
   const event = new CustomEvent('rf4:route');
   document.dispatchEvent(event);
 });
+async function deleteAccount(a) {
+  const ok = await confirmDialog({
+    title: 'Удалить аккаунт «' + a.username + '»?',
+    desc: 'Будет удалена учетная запись для входа. Игровой профиль, персонаж и его данные сохранятся в базе; UID не будет использоваться повторно. Это действие нельзя отменить.',
+    confirm: 'Удалить аккаунт',
+    danger: true,
+  });
+  if (!ok) return;
+  try {
+    await post('/api/accounts/delete', { uid: a.uid });
+    toast('Аккаунт удалён. Данные персонажа сохранены.');
+    window.dispatchEvent(new CustomEvent('rf4:accounts-refresh'));
+  } catch (e) { toast(errText(e), 'bad'); }
+}
