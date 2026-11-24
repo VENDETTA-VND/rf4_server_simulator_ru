@@ -9,7 +9,7 @@ import (
 )
 
 const gearAssistantUID int64 = 2147483646
-const gearAssistantName = "钓具助手"
+const gearAssistantName = "Помощник по снастям"
 
 func overloadProtectionKey(uid int64) string {
 	return fmt.Sprintf("gear-assistant:overload-protection:%d", uid)
@@ -39,8 +39,8 @@ type gearFeature struct {
 const gearSep = "─────────────────────"
 
 var gearFeatures = map[string]gearFeature{
-	"overload": {"【满红不爆】", "已开启，对你的所有鱼竿生效。", "已关闭，恢复正常装备损坏规则。", "【满红不爆】：防止断件与锁轮过载烧毁；普通磨损、自然脱钩及主动剪线不变，不修复已有损伤。"},
-	"stamina":  {"【耐力播报】", "已开启：搏鱼期间每 5 秒在聊天框显示当前鱼的耐力与超载。", "已关闭。", "【耐力播报】：搏鱼期间每 5 秒在聊天框显示当前鱼的耐力与超载。耐力是这尾鱼还剩多少体力，会一路掉到 0；超载是这尾鱼此刻的拉力超出整根钓组最大拉力的百分比，0% 表示拉得动（小鱼恒为 0%），数字越大越拉不动，鱼乏了它会自己降下来。仅在当前手持竿进入搏鱼时播报。"},
+	"overload": {"【Защита снастей】", "Включена для всех ваших удилищ.", "Выключена. Восстановлены обычные правила износа и поломки снастей.", "【Защита снастей】: предотвращает поломку компонентов оснастки и сгорание катушки от перегрузки. Обычный износ, сход рыбы и обрыв лески вручную не затрагиваются; существующие повреждения не ремонтируются."},
+	"stamina":  {"【Отчёт о выносливости】", "Включено: во время вываживания каждые 5 секунд в чате показываются выносливость рыбы и перегрузка снасти.", "Выключено.", "【Отчёт о выносливости】: во время вываживания каждые 5 секунд в чате показываются оставшаяся выносливость рыбы и перегрузка. Выносливость постепенно падает до 0. Перегрузка — процент, на который сила рывка рыбы превышает максимальную нагрузку всей оснастки: 0% означает, что снасть справляется. Чем выше значение, тем сложнее вываживание; по мере усталости рыбы перегрузка снижается. Сообщения появляются только при вываживании на удилище в руках."},
 }
 
 // gearCommand 是一级解析结果：mode 为 help/unknown/cmd。
@@ -57,13 +57,13 @@ func parseGearCommand(text string) gearCommand {
 	}
 	head := fields[0]
 	switch head {
-	case "帮助", "菜单", "help", "Help", "HELP", "?", "h", "0", "说明":
+	case "помощь", "меню", "описание", "help", "Help", "HELP", "?", "h", "0", "说明", "帮助", "菜单":
 		return gearCommand{mode: "help"}
-	case "1", "过载", "满红", "满红不爆", "overload", "Overload", "OVERLOAD":
+	case "1", "защита", "перегрузка", "без поломок", "overload", "Overload", "OVERLOAD", "过载", "满红", "满红不爆":
 		head = "overload"
-	case "2", "耐力", "stamina", "Stamina", "STAMINA":
+	case "2", "выносливость", "stamina", "Stamina", "STAMINA", "耐力":
 		head = "stamina"
-	case "开", "开启", "关", "关闭", "状态":
+	case "вкл", "включить", "выкл", "выключить", "статус", "вкл", "включить", "开", "Включено", "выкл", "выключить", "关", "Выключено", "状态":
 		// 两级菜单之前的单字指令，语义是满红不爆。保留成一级快捷别名：
 		// 老玩家不必先记序号，也不会因为菜单化而失去「开关」这个动作。
 		if len(fields) > 1 {
@@ -76,15 +76,15 @@ func parseGearCommand(text string) gearCommand {
 	action := ""
 	if len(fields) > 1 {
 		switch fields[1] {
-		case "开", "开启", "on", "enable", "ON", "ENABLE", "k", "K", "y", "Y":
+		case "вкл", "включить", "on", "enable", "ON", "ENABLE", "k", "K", "y", "Y", "вкл", "включить", "开", "Включено":
 			action = "on"
-		case "关", "关闭", "off", "disable", "OFF", "DISABLE", "g", "G", "n", "N":
+		case "выкл", "выключить", "off", "disable", "OFF", "DISABLE", "g", "G", "n", "N", "выкл", "выключить", "关", "Выключено":
 			action = "off"
-		case "状态", "status", "query", "STATUS":
+		case "статус", "status", "query", "STATUS", "状态":
 			action = ""
-		case "说明", "help", "describe", "info", "?", "HELP", "DESCRIBE", "INFO", "h", "H":
+		case "описание", "help", "describe", "info", "?", "HELP", "DESCRIBE", "INFO", "h", "H", "说明":
 			action = "desc"
-		case "返回", "back", "BACK", "b", "B":
+		case "назад", "back", "BACK", "b", "B", "返回":
 			action = "back"
 		default:
 			return gearCommand{mode: "unknown"}
@@ -96,9 +96,9 @@ func parseGearCommand(text string) gearCommand {
 // legacyGearAction 把旧单字指令还原成二级动作；「状态」对应空动作（只显示菜单）。
 func legacyGearAction(text string) string {
 	switch text {
-	case "开", "开启":
+	case "вкл", "включить", "开", "Включено":
 		return "on"
-	case "关", "关闭":
+	case "выкл", "выключить", "关", "Выключено":
 		return "off"
 	}
 	return ""
@@ -106,38 +106,38 @@ func legacyGearAction(text string) string {
 
 // gearReply 拼出二级菜单内任意操作的回复，统一带快捷键尾行。
 func gearReply(f gearFeature, action string, enabled bool) (next bool, reply string) {
-	const footer = "\n" + gearSep + "\n开(y) · 关(n) · 说明(h) · 返回(b)"
+	const footer = "\n" + gearSep + "\nВкл (y) · Выкл (n) · Описание (h) · Назад (b)"
 	next = enabled
 	switch action {
 	case "on":
 		next = true
 		if enabled {
-			reply = f.label + "已经开启，无需重复设置。"
+			reply = f.label + " уже включено."
 		} else {
 			reply = f.label + f.onNew
 		}
 	case "off":
 		next = false
 		if !enabled {
-			reply = f.label + "已经关闭，无需重复设置。"
+			reply = f.label + " уже выключено."
 		} else {
 			reply = f.label + f.offNew
 		}
 	case "desc":
 		reply = f.desc
 	default:
-		status := "关闭"
+		status := "Выключено"
 		if enabled {
-			status = "开启"
+			status = "Включено"
 		}
-		reply = "【当前状态】：" + status
+		reply = "【Текущий статус】: " + status
 	}
 	reply += footer
 	return next, reply
 }
 
 func gearAssistantHelp() string {
-	items := []string{"1  【满红不爆】", "2  【耐力播报】"}
+	items := []string{"1  【Защита снастей】", "2  【Отчёт о выносливости】"}
 	// 每行下面都跟一条分隔线（含最后一行），形成下划线效果。
 	return strings.Join(items, "\n"+gearSep+"\n") + "\n" + gearSep
 }
@@ -175,7 +175,7 @@ func (s *Server) gearAssistantReplyText(ctx *Ctx, uid int64, reply string) ([]by
 	c := ctx.Sess.pushCtx()
 	tx, err := beginEconomyTx(c, s.DB)
 	if err != nil {
-		ctx.ReplyFailure("System.IO.IOException", "钓具设置保存失败")
+		ctx.ReplyFailure("System.IO.IOException", "Не удалось сохранить настройки снастей")
 		return nil, true
 	}
 	defer func() { _ = tx.Rollback() }()
@@ -185,7 +185,7 @@ func (s *Server) gearAssistantReplyText(ctx *Ctx, uid int64, reply string) ([]by
 		err = tx.Commit()
 	}
 	if err != nil {
-		ctx.ReplyFailure("System.IO.IOException", "钓具设置保存失败")
+		ctx.ReplyFailure("System.IO.IOException", "Не удалось сохранить настройки снастей")
 		return nil, true
 	}
 	ctx.AfterResponse(func() { s.notifyMail(ctx.Sess.pushCtx(), uid, mailID) })
@@ -199,7 +199,7 @@ func (s *Server) receiveGearAssistant(ctx *Ctx, text string) ([]byte, bool) {
 	}
 	uid := ctx.Sess.Userid
 	if uid <= 0 {
-		ctx.ReplyFailure("System.InvalidOperationException", "请先登录")
+		ctx.ReplyFailure("System.InvalidOperationException", "Сначала войдите в игру")
 		return nil, true
 	}
 
@@ -231,9 +231,9 @@ func (s *Server) receiveGearAssistant(ctx *Ctx, text string) ([]byte, bool) {
 // gearSubMenu 处理二级内的输入：只认 y/n/h/b，未知重显，b 返回一级。
 func (s *Server) gearSubMenu(ctx *Ctx, uid int64, feature, text string) ([]byte, bool) {
 	switch strings.ToLower(strings.TrimSpace(text)) {
-	case "y", "k", "开", "开启", "on", "enable":
+	case "y", "k", "вкл", "включить", "开", "Включено", "on", "enable":
 		return s.gearSubAction(ctx, uid, feature, "on")
-	case "n", "g", "关", "关闭", "off", "disable":
+	case "n", "g", "выкл", "выключить", "关", "Выключено", "off", "disable":
 		return s.gearSubAction(ctx, uid, feature, "off")
 	case "h", "说明", "help", "describe", "info", "?":
 		return s.gearSubShow(ctx, uid, feature, "desc")
@@ -264,7 +264,7 @@ func (s *Server) gearReadFlag(c context.Context, uid int64, feature string) (boo
 func (s *Server) gearSubShow(ctx *Ctx, uid int64, feature string, prefix ...string) ([]byte, bool) {
 	enabled, err := s.gearReadFlag(ctx.Sess.pushCtx(), uid, feature)
 	if err != nil {
-		ctx.ReplyFailure("System.IO.IOException", "钓具设置读取失败")
+		ctx.ReplyFailure("System.IO.IOException", "Не удалось прочитать настройки снастей")
 		return nil, true
 	}
 	var reply string
@@ -287,7 +287,7 @@ func (s *Server) gearSubAction(ctx *Ctx, uid int64, feature, action string) ([]b
 	c := ctx.Sess.pushCtx()
 	tx, err := beginEconomyTx(c, s.DB)
 	if err != nil {
-		ctx.ReplyFailure("System.IO.IOException", "钓具设置保存失败")
+		ctx.ReplyFailure("System.IO.IOException", "Не удалось сохранить настройки снастей")
 		return nil, true
 	}
 	defer func() { _ = tx.Rollback() }()
