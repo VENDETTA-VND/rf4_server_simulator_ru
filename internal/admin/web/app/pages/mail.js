@@ -64,7 +64,7 @@ export default async function mail(params) {
   const send = btn('Отправить', async () => {
     if (!to) { toast('Сначала выберите получателя', 'bad'); return; }
     if (!text.value.trim() && !attach.length) { toast('Нельзя отправить пустое письмо без текста и вложений', 'bad'); return; }
-    if (!(await confirmDialog({ title: `Отправить игроку «${to.name}»?`, desc: attach.length ? `附带 ${attach.length} 种Предмет。Отправленное письмо нельзя отозвать.` : 'Отправленное письмо нельзя отозвать.', confirm: 'Отправить' }))) return;
+    if (!(await confirmDialog({ title: `Отправить игроку «${to.name}»?`, desc: attach.length ? `Вложено предметов: ${attach.length}. Отправленное письмо нельзя отозвать.` : 'Отправленное письмо нельзя отозвать.', confirm: 'Отправить' }))) return;
     send.disabled = true;
     try {
       await post('/api/mail/send', { uid: to.uid, text: text.value.trim(), items: attach.map((a) => ({ item_id: a.item_id, qty: a.qty })) });
@@ -84,7 +84,7 @@ export default async function mail(params) {
           actions: h('div', { class: 'row' }, h('span', { class: 'muted small', text: 'Шаблон' }), TEMPLATES.map(([label, title, body]) => btn(label, () => { text.value = title + '\n\n' + body; preview(); }, 'ghost sm'))),
           body: text,
         }),
-        section({ title: 'Вложения', desc: 'Предметы придут вместе с письмом и попадут в инвентарь после получения.', actions: btn('添加Предмет', () => pickItem({ title: 'Добавить вложение', onPick: (x) => { if (!attach.some((a) => a.item_id === x.item_id)) attach.push({ ...x, qty: 1 }); drawAttach(); preview(); } }), 'sm', { icon: 'plus' }), body: attachBox })),
+        section({ title: 'Вложения', desc: 'Предметы придут вместе с письмом и попадут в инвентарь после получения.', actions: btn('Добавить предмет', () => pickItem({ title: 'Добавить вложение', onPick: (x) => { if (!attach.some((a) => a.item_id === x.item_id)) attach.push({ ...x, qty: 1 }); drawAttach(); preview(); } }), 'sm', { icon: 'plus' }), body: attachBox })),
       h('div', { style: { position: 'sticky', top: '20px' } },
         section({ title: 'Предпросмотр', desc: 'Так будет выглядеть сообщение для игрока.', body: pv }),
         h('div', { class: 'row', style: { justifyContent: 'flex-end' } }, send))));
