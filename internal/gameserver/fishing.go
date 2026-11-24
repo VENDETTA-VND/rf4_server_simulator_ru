@@ -3400,7 +3400,7 @@ func (s *Server) fishEscapeText(f *RolledFish, reason string) string {
 		return ""
 	}
 	if f == nil {
-		return "Сход рыбы (" + reason + "）"
+		return "Сход рыбы (" + reason + ")"
 	}
 	return fmt.Sprintf("Сход рыбы: %s %s (%s)",
 		s.speciesZhName(s.dbCtx(), f.Species), formatWeightG(f.WeightG), reason)
@@ -3442,10 +3442,6 @@ func (s *Server) notifyFishLanded(sess *Session, f *RolledFish, newRecord bool) 
 	// 管理员显式设置 fish_tv_kv=0 时退化为普通系统文本播报，避免客户端
 	// 解析模板缺参导致断连。
 	kind := fishAnnouncementKind(f.Grade)
-	if kind != 0 && s.tunableF("fish_tv_kv", 1) != 0 {
-		sess.pushChatProbe(27, kind, "", s.fishLandedKV(f))
-		return
-	}
 	if text := s.fishLandedText(f, newRecord); text != "" {
 		sess.pushSystemChat(text)
 	}
@@ -3509,7 +3505,7 @@ func (s *Server) notifyFishEscape(sess *Session, f *RolledFish, reason string) {
 		officialKind = kind
 	}
 	if f == nil || s.tunableF("fish_escape_taunt", 1) == 0 {
-		sess.pushChatProbe(27, officialKind, "", nil)
+		sess.pushSystemChat(s.fishEscapeText(f, "рыба сорвалась"))
 		return
 	}
 	weight := int64(0)
@@ -3532,9 +3528,9 @@ func (s *Server) notifyFishEscape(sess *Session, f *RolledFish, reason string) {
 	taunt := fishEscapeTaunts[rand.Intn(len(fishEscapeTaunts))]
 	// 客户端 KV 模板恒在文案末尾追加“X 克/公斤”（缺键2 显示“0 克”），
 	// 服务端无法把重量插到句子中间。想让重量紧跟鱼名，只能把鱼名放到句尾：
-	//   "这都能跑!Редкая 丁鱵" + 客户端追加 " 1.5 千克"
-	text := "" + tier + name + " сорвалась! " + taunt + "!"
-	sess.pushChatProbe(27, 3, "", fishTVKv(text, weight))
+	// Русский текст отправляется отдельным системным сообщением.
+	text := "Упущена рыба: " + tier + name + ". " + taunt
+	sess.pushSystemChat(text)
 }
 
 // bumpFishingCounter 增加玩家钓鱼计数器（escapes 等），幂等累加。
