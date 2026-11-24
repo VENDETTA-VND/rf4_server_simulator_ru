@@ -79,6 +79,8 @@ func NewServer(cfg config.Admin, db *store.DB, log logger, webFS fs.FS) *Server 
 	mux.HandleFunc("POST /api/skill_gain_mode", auth(s.handleSkillGainModeSet))
 	mux.HandleFunc("POST /api/fish_tv_test", auth(s.handleFishTVTest))
 	mux.HandleFunc("GET /api/players", auth(s.handlePlayers))
+	mux.HandleFunc("GET /api/accounts", auth(s.handleAccounts))
+	mux.HandleFunc("POST /api/accounts/update", auth(s.handleAccountUpdate))
 	mux.HandleFunc("GET /api/players/detail", auth(s.handlePlayerDetail))
 	mux.HandleFunc("POST /api/players/update", auth(s.handlePlayerUpdate))
 	mux.HandleFunc("GET /api/players/records", auth(s.handlePlayerRecords))
