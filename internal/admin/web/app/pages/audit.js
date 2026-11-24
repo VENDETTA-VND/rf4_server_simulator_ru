@@ -5,9 +5,9 @@ import { auditLabel, AUDIT_LABELS } from '../labels.js';
 const KINDS = [
   ['all', 'Все', null],
   ['player', 'Игроки', /^(player_update|grant_item|item_delete|keepnet_|skill_|kick|ban|mail_)/],
-  ['play', '钓Рыба玩法', /^(tunable|fish_|bite_mode|spawn_mode|hook_profile|bait_rule)/],
+  ['play', 'Рыбалка', /^(tunable|fish_|bite_mode|spawn_mode|hook_profile|bait_rule)/],
   ['shop', '商店', /^shop_/],
-  ['login', '登录', /^login$/],
+  ['login', 'Вход', /^login$/],
 ];
 
 export default async function audit() {
@@ -23,7 +23,7 @@ export default async function audit() {
       if (!q) return true;
       return [auditLabel(a), a, e.Target ?? e.target, e.Detail ?? e.detail, e.Admin ?? e.admin].join(' ').toLowerCase().includes(q);
     });
-    count.textContent = `${rows.length} 条`;
+    count.textContent = `Записей: ${rows.length}`;
     tbody.replaceChildren(...(rows.length ? rows.map((e) => {
       const ts = e.TS ?? e.ts, a = e.Action ?? e.action;
       return h('tr', {},
@@ -32,7 +32,7 @@ export default async function audit() {
         h('td', { class: 'mono small', text: (e.Target ?? e.target) || '—' }),
         h('td', { class: 'small text-2', style: { whiteSpace: 'normal', maxWidth: '520px', wordBreak: 'break-all' }, text: (e.Detail ?? e.detail) || '' }),
         h('td', { class: 'muted small', text: e.Admin ?? e.admin ?? '' }));
-    }) : [h('tr', {}, h('td', { colspan: 5 }, empty('没有记录')))]));
+    }) : [h('tr', {}, h('td', { colspan: 5 }, empty('Записей нет')))]));
   };
   draw();
   const filters = h('div', { class: 'seg' }, KINDS.map(([k, l]) => h('button', { type: 'button', class: k === kind ? 'on' : '', onclick: (ev) => { kind = k; [...filters.children].forEach((b) => b.classList.toggle('on', b === ev.currentTarget)); draw(); } }, l)));
