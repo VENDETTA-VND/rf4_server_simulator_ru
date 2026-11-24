@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"regexp"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -74,13 +74,32 @@ func (s *LoginServer) registerAccount(w http.ResponseWriter, r *http.Request, db
 		return
 	}
 	defer tx.Rollback()
+	// UID выдаётся сервером из монотонного счётчика. Он не уменьшается
+	// после удаления аккаунта и не зависит от IP/компьютера игрока.
+	if _, err = tx.ExecContext(r.Context(), `
+		INSERT OR IGNORE INTO player_uid_seq(id, next_uid) VALUES(1, 1000001)`); err != nil {
+		writeAccountJSON(w, http.StatusInternalServerError, accountResponse{Error: "account creation failed"})
+		return
+	}
+	if _, err = tx.ExecContext(r.Context(), `
+		UPDATE player_uid_seq
+		SET next_uid = CASE
+			WHEN next_uid <= COALESCE((SELECT MAX(uid) FROM profile), 1000000)
+			THEN COALESCE((SELECT MAX(uid) FROM profile), 1000000) + 1
+			WHEN next_uid <= COALESCE((SELECT MAX(uid) FROM player_account), 1000000)
+			THEN COALESCE((SELECT MAX(uid) FROM player_account), 1000000) + 1
+			ELSE next_uid
+		END
+		WHERE id=1`); err != nil {
+		writeAccountJSON(w, http.StatusInternalServerError, accountResponse{Error: "account creation failed"})
+		return
+	}
 	var uid int64
-	if err = tx.QueryRowContext(r.Context(), `
-		SELECT MAX(uid) + 1 FROM (
-			SELECT COALESCE(MAX(uid), 1000001) AS uid FROM profile
-			UNION ALL
-			SELECT COALESCE(MAX(uid), 1000001) AS uid FROM player_account
-		)`, ).Scan(&uid); err != nil {
+	if err = tx.QueryRowContext(r.Context(), `SELECT next_uid FROM player_uid_seq WHERE id=1`).Scan(&uid); err != nil {
+		writeAccountJSON(w, http.StatusInternalServerError, accountResponse{Error: "account creation failed"})
+		return
+	}
+	if _, err = tx.ExecContext(r.Context(), `UPDATE player_uid_seq SET next_uid=next_uid+1 WHERE id=1`); err != nil {
 		writeAccountJSON(w, http.StatusInternalServerError, accountResponse{Error: "account creation failed"})
 		return
 	}
