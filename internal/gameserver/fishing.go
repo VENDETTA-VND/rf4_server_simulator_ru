@@ -3500,21 +3500,13 @@ func (s *Server) notifyFishEscape(sess *Session, f *RolledFish, reason string) {
 	if s == nil || sess == nil {
 		return
 	}
-	officialKind := 7
-	if kind, ok := escapeTemplateKind[reason]; ok {
-		officialKind = kind
-	}
 	if f == nil || s.tunableF("fish_escape_taunt", 1) == 0 {
 		sess.pushSystemChat(s.fishEscapeText(f, "рыба сорвалась"))
 		return
 	}
-	weight := int64(0)
 	name := ""
 	tier := ""
 	if f != nil {
-		if f.WeightG > 0 {
-			weight = f.WeightG
-		}
 		name = s.speciesZhName(s.dbCtx(), f.Species)
 		if name == "" {
 			name = f.Species
