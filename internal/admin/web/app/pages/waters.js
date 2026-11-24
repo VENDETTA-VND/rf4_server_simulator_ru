@@ -25,7 +25,7 @@ export default async function waters(params) {
   const side = h('div', { class: 'card master' }, h('div', { class: 'list' }, list.map((a) => {
     const n = zones.filter((z) => z.loc === a.loc).length;
     return h('div', { class: 'list-item clickable' + (a.loc === loc ? ' on' : ''), onclick: () => navigate('waters', a.loc, tab) },
-      h('div', { class: 'grow' }, h('div', { class: 'title', text: a.loc }), h('div', { class: 'sub', text: `${a.fish_count}  видов рыб` + (n ? ` · ${n} 个Зоны обитания стай` : '') })),
+      h('div', { class: 'grow' }, h('div', { class: 'title', text: a.loc }), h('div', { class: 'sub', text: `${a.fish_count}  видов рыб` + (n ? ` · ${n} зон обитания стай` : '') })),
       a.map_kind === 'sea' ? badge('Морская карта') : null);
   })));
   const main = h('div', {}, h('div', { class: 'card card-pad' }, loading(6)));
@@ -33,7 +33,7 @@ export default async function waters(params) {
     pageHead('Водоёмы и виды рыб', 'Какие виды рыб встречаются в каждом водоёме, их доля и скорость клёва.'),
     h('div', { class: 'master-detail', style: { gridTemplateColumns: '240px minmax(0,1fr)' } }, side, main));
   if (!loc) { main.replaceChildren(h('div', { class: 'card' }, empty('Нет данных о водоёмах'))); return root; }
-  const tabBar = tabs([['fish', 'Рыба种'], ['zones', 'Зоны обитания стай', zones.filter((z) => z.loc === loc).length]], tab, (t) => navigate('waters', loc, t));
+  const tabBar = tabs([['fish', 'Виды рыб'], ['zones', 'Зоны обитания стай', zones.filter((z) => z.loc === loc).length]], tab, (t) => navigate('waters', loc, t));
   if (tab === 'zones') {
     // 画地图需要空间：收起左侧水域列表，改用标题栏的下拉选择
     const cfg = await api('/api/fish/config?loc=' + encodeURIComponent(loc)).catch(() => ({ fish: [] }));
@@ -56,14 +56,14 @@ export default async function waters(params) {
   return root;
 }
 
-// ---------- Рыба种名册 ----------
-// 爱吃的Наживка：静态Правила来自РыбаНаживка偏好；轮换只认名册行里后端给的 bait_groups / bait_rotate_sec
+// ---------- Виды рыб名册 ----------
+// Предпочитаемая наживка：静态Правила来自РыбаНаживка偏好；轮换只认名册行里后端给的 bait_groups / bait_rotate_sec
 function baitCell(row, pref) {
   const allow = (pref && pref.allow) || [];
   const groups = (row.bait_groups || []).filter((g) => g && g.length);
   const rotating = groups.length > 1 && Number(row.bait_rotate_sec) > 0;
   return h('td', { style: { whiteSpace: 'normal', maxWidth: '320px' } },
-    allow.length ? h('div', { class: 'small text-2', text: allow.slice(0, 5).join('、') + (allow.length > 5 ? ` 等 ${allow.length} 种` : '') }) : h('span', { class: 'muted small', text: '没有设置' }),
+    allow.length ? h('div', { class: 'small text-2', text: allow.slice(0, 5).join('、') + (allow.length > 5 ? ` 等 ${allow.length} 种` : '') }) : h('span', { class: 'muted small', text: 'Не настроено' }),
     rotating ? h('div', { style: { marginTop: '4px' } }, badge(`Ротация: ${groups.length} групп · каждые ${Math.round(row.bait_rotate_sec / 60)} мин.${row.bait_rotate_mode === 'strict' ? ' · строгий режим' : ''}`, 'accent')) : null);
 }
 
@@ -84,7 +84,7 @@ function fishView(cfg, baitByKey = {}) {
       setTimeout(render, 200);
     },
   });
-  // Рыба种表的改动不经过 Form 字段，手动把它算进「未Сохранить」
+  // Виды рыб表的改动不经过 Form 字段，手动把它算进「未Сохранить」
   const origDirty = form.dirtyKeys.bind(form);
   form.dirtyKeys = () => { const k = origDirty(); return dirtyRows && !k.length ? ['_fish'] : k; };
   const origValues = form.values.bind(form);
@@ -120,13 +120,13 @@ function fishView(cfg, baitByKey = {}) {
 
   const params = h('div', {},
     form.row({ key: 'bite_probability', label: 'Вероятность поклёвки при забросе', help: '1 означает, что рыба клюнет при каждом забросе.', kind: 'float', min: 0, max: 1, def: '1' }, s.bite_probability),
-    form.row({ key: 'bite_delay_scale', label: 'Скорость клёва', help: '0.5 = 快一倍，2 = 慢一倍。', kind: 'float', min: 0, unit: '倍', def: '1' }, s.bite_delay_scale),
-    form.row({ key: 'bite_delay_max', label: 'Максимальное ожидание', help: 'При обычной ловле поклёвка гарантированно произойдёт за это время.', kind: 'float', min: 1, unit: '秒', def: '20' }, s.bite_delay_max),
-    form.row({ key: 'bite_delay_lure_max', label: '路亚Максимальное ожидание', kind: 'float', min: 0.1, unit: '秒', def: '6' }, s.bite_delay_lure_max),
-    form.row({ key: 'bite_delay_fixed', label: 'Фиксированное время до поклёвки', help: '0 — случайное время; при заданном значении поклёвка будет происходить через указанный интервал.', kind: 'float', min: 0, unit: '秒', def: '0' }, s.bite_delay_fixed));
+    form.row({ key: 'bite_delay_scale', label: 'Скорость клёва', help: '0,5 — вдвое быстрее, 2 — вдвое медленнее.', kind: 'float', min: 0, unit: '倍', def: '1' }, s.bite_delay_scale),
+    form.row({ key: 'bite_delay_max', label: 'Максимальное ожидание', help: 'При обычной ловле поклёвка гарантированно произойдёт за это время.', kind: 'float', min: 1, unit: 'сек.', def: '20' }, s.bite_delay_max),
+    form.row({ key: 'bite_delay_lure_max', label: 'Максимальное ожидание при спиннинговой ловле', kind: 'float', min: 0.1, unit: 'сек.', def: '6' }, s.bite_delay_lure_max),
+    form.row({ key: 'bite_delay_fixed', label: 'Фиксированное время до поклёвки', help: '0 — случайное время; при заданном значении поклёвка будет происходить через указанный интервал.', kind: 'float', min: 0, unit: 'сек.', def: '0' }, s.bite_delay_fixed));
 
   return h('div', { class: 'stack' },
-    h('details', { class: 'advanced', style: { borderTop: 0, marginTop: '-6px' } }, h('summary', {}, 'Скорость клёва в этом водоёме ', h('small', { text: `（Сейчас：${Number(s.bite_delay_fixed) > 0 ? '固定 ' + s.bite_delay_fixed + ' 秒' : '最长 ' + s.bite_delay_max + ' 秒'}）` })), params),
+    h('details', { class: 'advanced', style: { borderTop: 0, marginTop: '-6px' } }, h('summary', {}, 'Скорость клёва в этом водоёме ', h('small', { text: `(Сейчас: ${Number(s.bite_delay_fixed) > 0 ? 'фиксировано ' + s.bite_delay_fixed + ' сек.' : 'максимум ' + s.bite_delay_max + ' сек.'}）` })), params),
     h('div', { class: 'row' },
       h('div', { class: 'grow', style: { maxWidth: '300px' } }, searchBox('Фильтр по названию рыбы', (v) => { q = v.toLowerCase(); draw(); })),
       btn(q ? 'Включить найденные' : 'Включить все', () => { fish.forEach((f) => { if (!q || `${f.fish_key} ${f.name_zh}`.toLowerCase().includes(q)) f.enabled = true; }); touch(); draw(); }, 'ghost sm'),
@@ -137,13 +137,13 @@ function fishView(cfg, baitByKey = {}) {
         if (!(await confirmDialog({ title: `Восстановить настройки «${cfg.area}» по умолчанию?`, desc: 'Все изменения водоёма будут сброшены к стандартному списку видов рыб и их долям.', confirm: 'Восстановить значения по умолчанию', danger: true }))) return;
         try { await post('/api/fish/config/reset', { area: cfg.area }); toast('Настройки по умолчанию восстановлены'); dirtyRows = false; render(); } catch (e) { toast(errText(e), 'bad'); }
       }, 'ghost sm')),
-    h('p', { class: 'muted small', text: '「权重」决定这 видов рыб出现的多少：权重越大越常见，右边的百分比是换算后的占比。关闭或权重填 0 表示这里不出这 видов рыб。' }),
+    h('p', { class: 'muted small', text: '「Весовой коэффициент」决定这 видов рыб出现的多少：Весовой коэффициент越大越常见，右边的百分比是换算后的Доля。关闭或Весовой коэффициент填 0 表示这里不出这 видов рыб。' }),
     h('div', { class: 'table-wrap', style: { maxHeight: 'calc(100vh - 360px)' } }, h('table', { class: 'table' },
-      h('thead', {}, h('tr', {}, h('th', { text: '出现' }), h('th', { text: 'Рыба' }), h('th', { text: '爱吃的Наживка' }), h('th', { text: '权重' }), h('th', { text: '占比' }), h('th', {}))), tbody)));
+      h('thead', {}, h('tr', {}, h('th', { text: '出现' }), h('th', { text: 'Рыба' }), h('th', { text: 'Предпочитаемая наживка' }), h('th', { text: 'Весовой коэффициент' }), h('th', { text: 'Доля' }), h('th', {}))), tbody)));
 }
 
 function addFish(fish, done) {
-  const results = h('div', { class: 'card', style: { maxHeight: '400px', overflow: 'auto' } }, empty('输入Рыба名开始Поиск'));
+  const results = h('div', { class: 'card', style: { maxHeight: '400px', overflow: 'auto' } }, empty('Введите название рыбы для поиска'));
   const search = debounce(async (q) => {
     const list = await apiList('/api/fish/pool?limit=80&q=' + encodeURIComponent(q)).catch(() => []);
     results.replaceChildren(list.length ? h('div', { class: 'list' }, list.map((x) => {
