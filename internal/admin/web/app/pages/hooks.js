@@ -62,14 +62,14 @@ function edit(p, reload) {
   dialog({
     title: p.name || p.item_id, desc: p.item_id, body, size: 'lg',
     actions: [
-      { label: 'Восстановить значения по умолчанию', kind: 'ghost', onClick: async () => { await post('/api/hooks/profiles', { item_id: p.item_id, solid_scale: 1, hold_scale: 1, small_fish_floor: 0, over_capacity_hold_floor: 0 }); toast('已Восстановить значения по умолчанию，Вступит в силу примерно через 30 секунд'); reload(); } },
+      { label: 'Восстановить значения по умолчанию', kind: 'ghost', onClick: async () => { await post('/api/hooks/profiles', { item_id: p.item_id, solid_scale: 1, hold_scale: 1, small_fish_floor: 0, over_capacity_hold_floor: 0 }); toast('Значения по умолчанию восстановлены. Вступят в силу примерно через 30 секунд.'); reload(); } },
       { label: 'Отмена', kind: 'ghost' },
       { label: 'Сохранить', kind: 'primary', onClick: async () => {
         const keys = ['solid_scale', 'hold_scale', 'small_fish_floor', 'over_capacity_hold_floor'];
         if (!form.validate(keys)) return true;
         const v = form.values(keys);
         await post('/api/hooks/profiles', { item_id: p.item_id, solid_scale: +v.solid_scale, hold_scale: +v.hold_scale, small_fish_floor: +v.small_fish_floor, over_capacity_hold_floor: +v.over_capacity_hold_floor });
-        toast('已Сохранить，Вступит в силу примерно через 30 секунд'); reload();
+        toast('Сохранено. Вступит в силу примерно через 30 секунд.'); reload();
       } },
     ],
   });
