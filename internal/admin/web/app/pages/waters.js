@@ -120,7 +120,7 @@ function fishView(cfg, baitByKey = {}) {
 
   const params = h('div', {},
     form.row({ key: 'bite_probability', label: 'Вероятность поклёвки при забросе', help: '1 означает, что рыба клюнет при каждом забросе.', kind: 'float', min: 0, max: 1, def: '1' }, s.bite_probability),
-    form.row({ key: 'bite_delay_scale', label: 'Скорость клёва', help: '0,5 — вдвое быстрее, 2 — вдвое медленнее.', kind: 'float', min: 0, unit: '倍', def: '1' }, s.bite_delay_scale),
+    form.row({ key: 'bite_delay_scale', label: 'Скорость клёва', help: '0,5 — вдвое быстрее, 2 — вдвое медленнее.', kind: 'float', min: 0, unit: '×', def: '1' }, s.bite_delay_scale),
     form.row({ key: 'bite_delay_max', label: 'Максимальное ожидание', help: 'При обычной ловле поклёвка гарантированно произойдёт за это время.', kind: 'float', min: 1, unit: 'сек.', def: '20' }, s.bite_delay_max),
     form.row({ key: 'bite_delay_lure_max', label: 'Максимальное ожидание при спиннинговой ловле', kind: 'float', min: 0.1, unit: 'сек.', def: '6' }, s.bite_delay_lure_max),
     form.row({ key: 'bite_delay_fixed', label: 'Фиксированное время до поклёвки', help: '0 — случайное время; при заданном значении поклёвка будет происходить через указанный интервал.', kind: 'float', min: 0, unit: 'сек.', def: '0' }, s.bite_delay_fixed));
@@ -137,9 +137,9 @@ function fishView(cfg, baitByKey = {}) {
         if (!(await confirmDialog({ title: `Восстановить настройки «${cfg.area}» по умолчанию?`, desc: 'Все изменения водоёма будут сброшены к стандартному списку видов рыб и их долям.', confirm: 'Восстановить значения по умолчанию', danger: true }))) return;
         try { await post('/api/fish/config/reset', { area: cfg.area }); toast('Настройки по умолчанию восстановлены'); dirtyRows = false; render(); } catch (e) { toast(errText(e), 'bad'); }
       }, 'ghost sm')),
-    h('p', { class: 'muted small', text: '「Весовой коэффициент」决定这 видов рыб出现的多少：Весовой коэффициент越大越常见，右边的百分比是换算后的Доля。关闭或Весовой коэффициент填 0 表示这里不出这 видов рыб。' }),
+    h('p', { class: 'muted small', text: 'Весовой коэффициент определяет частоту появления вида: чем он выше, тем чаще встречается рыба. Процент справа показывает её долю. Если отключить вид или установить коэффициент 0, здесь он появляться не будет.' }),
     h('div', { class: 'table-wrap', style: { maxHeight: 'calc(100vh - 360px)' } }, h('table', { class: 'table' },
-      h('thead', {}, h('tr', {}, h('th', { text: '出现' }), h('th', { text: 'Рыба' }), h('th', { text: 'Предпочитаемая наживка' }), h('th', { text: 'Весовой коэффициент' }), h('th', { text: 'Доля' }), h('th', {}))), tbody)));
+      h('thead', {}, h('tr', {}, h('th', { text: 'Появление' }), h('th', { text: 'Рыба' }), h('th', { text: 'Предпочитаемая наживка' }), h('th', { text: 'Весовой коэффициент' }), h('th', { text: 'Доля' }), h('th', {}))), tbody)));
 }
 
 function addFish(fish, done) {
@@ -150,10 +150,10 @@ function addFish(fish, done) {
       const has = fish.some((f) => f.fish_key === x.fish_key);
       return h('div', { class: 'list-item' + (has ? '' : ' clickable'), style: { opacity: has ? 0.5 : 1 }, onclick: has ? null : () => {
         fish.push({ fish_key: x.fish_key, name_zh: x.name_zh, base_weight: 0, weight: 1, enabled: true, has_override: true });
-        close(); done(); toast(`已加入「${x.name_zh}」，记得Сохранить`);
+        close(); done(); toast(`Добавлен вид «${x.name_zh}». Не забудьте сохранить изменения.`);
       } }, fishIcon(x.fish_key), h('div', { class: 'grow' }, h('div', { class: 'title', text: x.name_zh }), h('div', { class: 'sub mono', text: x.fish_key })),
-      has ? badge('已在名单里') : h('span', { class: 'muted small', text: `${fmt(x.min_g)}–${fmt(x.max_g)} g` }));
+      has ? badge('Уже в списке') : h('span', { class: 'muted small', text: `${fmt(x.min_g)}–${fmt(x.max_g)} g` }));
     })) : empty('Ничего не найдено'));
   }, 250);
-  const { close } = dialog({ title: 'Добавить вид рыбы', size: 'lg', body: h('div', { class: 'stack' }, searchBox('输入Рыба名，如 狗Рыба', search), results) });
+  const { close } = dialog({ title: 'Добавить вид рыбы', size: 'lg', body: h('div', { class: 'stack' }, searchBox('Введите название рыбы для поиска', search), results) });
 }
