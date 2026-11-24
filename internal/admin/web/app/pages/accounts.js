@@ -1,4 +1,4 @@
-import { h, apiList, post, icon, toast, errText, pageHead, btn, empty, searchBox, debounce, dialog } from '../core.js';
+import { h, apiList, post, icon, toast, errText, pageHead, btn, empty, searchBox, debounce, dialog, setPageCleanup } from '../core.js';
 
 export default async function accounts() {
   const listBox = h('div', { class: 'list' }, h('div', { class: 'empty' }, 'Загрузка…'));
@@ -23,6 +23,9 @@ export default async function accounts() {
         ))))) : empty(query ? 'Аккаунты не найдены' : 'Аккаунтов пока нет', query ? 'Проверьте логин или UID.' : 'После регистрации игрока аккаунт появится здесь.'));
     } catch (e) { listBox.replaceChildren(empty('Ошибка загрузки', errText(e))); }
   }
+  const refresh = () => load();
+  window.addEventListener('rf4:accounts-refresh', refresh);
+  setPageCleanup(() => window.removeEventListener('rf4:accounts-refresh', refresh));
   await load();
   return root;
 }
