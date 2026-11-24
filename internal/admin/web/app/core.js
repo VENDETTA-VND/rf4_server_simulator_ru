@@ -118,7 +118,7 @@ export async function apiList(path, opt = {}) {
 }
 
 // ---------- 格式化 ----------
-export const fmt = (n) => (n === null || n === undefined || n === '' ? '—' : Number(n).toLocaleString('zh-CN'));
+export const fmt = (n) => (n === null || n === undefined || n === '' ? '—' : Number(n).toLocaleString('ru-RU'));
 export function timeText(ts) {
   const n = Number(ts);
   if (!n) return '—';
@@ -128,10 +128,10 @@ export function relTime(ts) {
   const t = Number(ts) * 1000;
   if (!t) return '—';
   const d = (Date.now() - t) / 1000;
-  if (d < 60) return '刚刚';
-  if (d < 3600) return Math.floor(d / 60) + ' 分钟前';
-  if (d < 86400) return Math.floor(d / 3600) + ' 小时前';
-  if (d < 86400 * 7) return Math.floor(d / 86400) + ' 天前';
+  if (d < 60) return 'только что';
+  if (d < 3600) return Math.floor(d / 60) + ' мин. назад';
+  if (d < 86400) return Math.floor(d / 3600) + ' ч. назад';
+  if (d < 86400 * 7) return Math.floor(d / 86400) + ' дн. назад';
   return timeText(ts);
 }
 
