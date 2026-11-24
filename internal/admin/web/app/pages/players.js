@@ -287,7 +287,7 @@ function skills(p, reload, setDirty) {
         h('div', { class: 'range-row', style: { marginTop: '6px' } }, range, out));
     })),
     h('div', {}, btn('Сбросить всё', async () => {
-      if (!(await confirmDialog({ title: 'Сбросить освоенность всех способов ловли?', desc: '所有钓法的熟练度都会变成 0%，Это действие нельзя отменить.', confirm: 'Сбросить', danger: true }))) return;
+      if (!(await confirmDialog({ title: 'Сбросить освоенность всех способов ловли?', desc: 'Уровень владения всеми способами ловли станет 0%. Это действие нельзя отменить.', confirm: 'Сбросить', danger: true }))) return;
       try { for (const s of list) await post('/api/players/skills/update', { uid: p.uid, skill_id: s.skill_id, points: 0 }); unsaved.clear(); toast('Сброшено'); reload(); } catch (e) { toast(errText(e), 'bad'); }
     }, 'danger sm')));
 }
