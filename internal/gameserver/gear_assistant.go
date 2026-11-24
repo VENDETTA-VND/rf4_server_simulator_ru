@@ -63,7 +63,7 @@ func parseGearCommand(text string) gearCommand {
 		head = "overload"
 	case "2", "выносливость", "stamina", "Stamina", "STAMINA", "耐力":
 		head = "stamina"
-	case "вкл", "включить", "выкл", "выключить", "статус", "вкл", "включить", "开", "Включено", "выкл", "выключить", "关", "Выключено", "状态":
+	case "вкл", "включить", "выкл", "выключить", "статус", "开", "开启", "关", "关闭", "状态":
 		// 两级菜单之前的单字指令，语义是满红不爆。保留成一级快捷别名：
 		// 老玩家不必先记序号，也不会因为菜单化而失去「开关」这个动作。
 		if len(fields) > 1 {
@@ -76,9 +76,9 @@ func parseGearCommand(text string) gearCommand {
 	action := ""
 	if len(fields) > 1 {
 		switch fields[1] {
-		case "вкл", "включить", "on", "enable", "ON", "ENABLE", "k", "K", "y", "Y", "вкл", "включить", "开", "Включено":
+		case "вкл", "включить", "on", "enable", "ON", "ENABLE", "k", "K", "y", "Y", "开", "开启":
 			action = "on"
-		case "выкл", "выключить", "off", "disable", "OFF", "DISABLE", "g", "G", "n", "N", "выкл", "выключить", "关", "Выключено":
+		case "выкл", "выключить", "off", "disable", "OFF", "DISABLE", "g", "G", "n", "N", "关", "关闭":
 			action = "off"
 		case "статус", "status", "query", "STATUS", "状态":
 			action = ""
@@ -231,13 +231,13 @@ func (s *Server) receiveGearAssistant(ctx *Ctx, text string) ([]byte, bool) {
 // gearSubMenu 处理二级内的输入：只认 y/n/h/b，未知重显，b 返回一级。
 func (s *Server) gearSubMenu(ctx *Ctx, uid int64, feature, text string) ([]byte, bool) {
 	switch strings.ToLower(strings.TrimSpace(text)) {
-	case "y", "k", "вкл", "включить", "开", "Включено", "on", "enable":
+	case "y", "k", "开", "开启", "on", "enable":
 		return s.gearSubAction(ctx, uid, feature, "on")
-	case "n", "g", "выкл", "выключить", "关", "Выключено", "off", "disable":
+	case "n", "g", "关", "关闭", "off", "disable":
 		return s.gearSubAction(ctx, uid, feature, "off")
-	case "h", "说明", "help", "describe", "info", "?":
+	case "h", "описание", "说明", "help", "describe", "info", "?":
 		return s.gearSubShow(ctx, uid, feature, "desc")
-	case "b", "返回", "back":
+	case "b", "назад", "返回", "back":
 		s.gearMenuClear(uid)
 		return s.gearAssistantReplyText(ctx, uid, gearAssistantHelp())
 	default:
@@ -297,7 +297,7 @@ func (s *Server) gearSubAction(ctx *Ctx, uid int64, feature, action string) ([]b
 	}
 	enabled, err := readKVFlag(c, tx, key)
 	if err != nil {
-		ctx.ReplyFailure("System.IO.IOException", "钓具设置读取失败，设置未改变")
+		ctx.ReplyFailure("System.IO.IOException", "Не удалось прочитать настройки снастей; настройки не изменены")
 		return nil, true
 	}
 	next, reply := gearReply(gearFeatures[feature], action, enabled)
@@ -316,7 +316,7 @@ func (s *Server) gearSubAction(ctx *Ctx, uid int64, feature, action string) ([]b
 		err = tx.Commit()
 	}
 	if err != nil {
-		ctx.ReplyFailure("System.IO.IOException", "钓具设置保存失败，设置未改变")
+		ctx.ReplyFailure("System.IO.IOException", "Не удалось сохранить настройки снастей; настройки не изменены")
 		return nil, true
 	}
 	if next != enabled {
