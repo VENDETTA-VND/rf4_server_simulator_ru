@@ -63,7 +63,7 @@ function baitCell(row, pref) {
   const groups = (row.bait_groups || []).filter((g) => g && g.length);
   const rotating = groups.length > 1 && Number(row.bait_rotate_sec) > 0;
   return h('td', { style: { whiteSpace: 'normal', maxWidth: '320px' } },
-    allow.length ? h('div', { class: 'small text-2', text: allow.slice(0, 5).join('、') + (allow.length > 5 ? ` 等 ${allow.length} 种` : '') }) : h('span', { class: 'muted small', text: 'Не настроено' }),
+    allow.length ? h('div', { class: 'small text-2', text: allow.slice(0, 5).join('、') + (allow.length > 5 ? ` и ещё ${allow.length} видов` : '') }) : h('span', { class: 'muted small', text: 'Не настроено' }),
     rotating ? h('div', { style: { marginTop: '4px' } }, badge(`Ротация: ${groups.length} групп · каждые ${Math.round(row.bait_rotate_sec / 60)} мин.${row.bait_rotate_mode === 'strict' ? ' · строгий режим' : ''}`, 'accent')) : null);
 }
 
