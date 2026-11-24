@@ -96,9 +96,9 @@ func parseGearCommand(text string) gearCommand {
 // legacyGearAction 把旧单字指令还原成二级动作；「状态」对应空动作（只显示菜单）。
 func legacyGearAction(text string) string {
 	switch text {
-	case "вкл", "включить", "开", "Включено":
+	case "вкл", "включить", "开", "开启":
 		return "on"
-	case "выкл", "выключить", "关", "Выключено":
+	case "выкл", "выключить", "关", "关闭":
 		return "off"
 	}
 	return ""
