@@ -3540,7 +3540,7 @@ func (s *Server) notifyFishEscape(sess *Session, f *RolledFish, reason string) {
 	// 客户端 KV 模板恒在文案末尾追加“X 克/公斤”（缺键2 显示“0 克”），
 	// 服务端无法把重量插到句子中间。想让重量紧跟鱼名，只能把鱼名放到句尾：
 	// Русский текст отправляется отдельным системным сообщением.
-	text := "Упущена рыба " + tier + name + ". " + taunt
+	text := "Упущена рыба " + tier + name + " (" + formatWeightG(f.WeightG) + "). " + taunt
 	sess.pushSystemChat(text)
 }
 
