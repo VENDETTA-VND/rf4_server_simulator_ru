@@ -3364,7 +3364,7 @@ func (s *Server) fishLandedText(f *RolledFish, newRecord bool) string {
 	weight := formatWeightG(f.WeightG)
 	switch {
 	case f.Grade >= 2:
-		text := fmt.Sprintf("Поймана %s рыба: %s %s", gradeZhName(f.Grade), name, weight)
+		text := fmt.Sprintf("Поймана рыба: %s %s — %s", name, weight, gradeZhName(f.Grade))
 		if newRecord {
 			text += " (новый рекорд)"
 		}
@@ -3389,7 +3389,7 @@ func (s *Server) fishReleasedText(f *RolledFish) string {
 	name := s.speciesZhName(s.dbCtx(), f.Species)
 	weight := formatWeightG(f.WeightG)
 	if f.Grade >= 3 {
-		return fmt.Sprintf("Отпущена %s рыба: %s %s", gradeZhName(f.Grade), name, weight)
+		return fmt.Sprintf("Отпущена рыба: %s %s — %s", name, weight, gradeZhName(f.Grade))
 	}
 	return fmt.Sprintf("Отпущена рыба: %s %s", name, weight)
 }
@@ -3531,16 +3531,16 @@ func (s *Server) notifyFishEscape(sess *Session, f *RolledFish, reason string) {
 			name = f.Species
 		}
 		if f.Grade >= 4 {
-			tier = "Сверхредкая "
+			tier = "сверхредкой категории "
 		} else if f.Grade == 3 {
-			tier = "Редкая "
+			tier = "редкой категории "
 		}
 	}
 	taunt := fishEscapeTaunts[rand.Intn(len(fishEscapeTaunts))]
 	// 客户端 KV 模板恒在文案末尾追加“X 克/公斤”（缺键2 显示“0 克”），
 	// 服务端无法把重量插到句子中间。想让重量紧跟鱼名，只能把鱼名放到句尾：
 	// Русский текст отправляется отдельным системным сообщением.
-	text := "Упущена рыба: " + tier + name + ". " + taunt
+	text := "Упущена рыба " + tier + name + ". " + taunt
 	sess.pushSystemChat(text)
 }
 
