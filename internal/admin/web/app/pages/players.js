@@ -305,7 +305,7 @@ function mail(p, reload) {
         h('td', {}, m.read ? badge('Прочитано') : badge('Не прочитано', 'accent')),
         h('td', { class: 'small muted', title: timeText(m.created_ts), text: relTime(m.created_ts) }),
         h('td', {}, btn('Удалить', async () => {
-          if (!(await confirmDialog({ title: 'Удалить это письмо?', desc: 'Вложения会一起丢弃，Это действие нельзя отменить.', confirm: 'Удалить', danger: true }))) return;
+          if (!(await confirmDialog({ title: 'Удалить это письмо?', desc: 'Вложения также будут удалены. Это действие нельзя отменить.', confirm: 'Удалить', danger: true }))) return;
           try { await post('/api/players/mail/delete', { uid: p.uid, ids: [m.id] }); toast('Удалено'); setTimeout(reload, 300); } catch (e) { toast(errText(e), 'bad'); }
         }, 'ghost sm'))))))) : h('div', { class: 'card' }, empty('Почтовый ящик пуст')));
 }
