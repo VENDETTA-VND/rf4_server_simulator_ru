@@ -71,7 +71,7 @@ export default async function rules() {
       onclick: async () => {
         if (on) return;
         if (form.isDirty() && !(await confirmDialog({ title: 'Есть несохранённые изменения', desc: 'Переключение режима появления рыбы перезагрузит страницу, а несохранённые изменения будут потеряны.', confirm: 'Продолжить' }))) return;
-        try { await post('/api/fish/spawn_mode', { mode: m }); toast(`Переключено на «${title}»，约 30 秒内生效`); render(); } catch (e) { toast(errText(e), 'bad'); }
+        try { await post('/api/fish/spawn_mode', { mode: m }); toast(`Переключено на «${title}». Вступит в силу примерно через 30 секунд.`); render(); } catch (e) { toast(errText(e), 'bad'); }
       },
     }, h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('b', { text: title }), on ? badge('Текущий режим', 'accent') : null),
     h('p', { class: 'muted small', style: { marginTop: '6px' }, text: desc }));
@@ -89,12 +89,12 @@ export default async function rules() {
     section({
       title: 'Режим появления рыбы', desc: 'Определяет долю ценной рыбы (трофеи и рыба с голубой короной) в улове. Выберите один из трёх режимов.',
       body: h('div', { class: 'stack' }, spawnCards, ...gradeEditors,
-        spawnMode === 'fish_hunt' ? callout('info', 'Четыре стадии клёва按Игроки打窝、聚Рыба的进度自动推进，没有需要手动设置的比例。') : null,
-        !spawnMode ? callout('warn', '还没有选择Режим появления рыбы，目前按旧版Правила出Рыба。') : null),
+        spawnMode === 'fish_hunt' ? callout('info', 'Четыре стадии клёва автоматически сменяются по мере прикармливания и привлечения рыбы игроком. Настраивать пропорции вручную не нужно.') : null,
+        !spawnMode ? callout('warn', 'Режим появления рыбы ещё не выбран. Пока действует прежняя система правил.') : null),
     }),
     section({ title: 'Другое', body: h('div', {},
       OTHER.map(([k, l, d, def]) => form.row({ key: k, label: l, help: d, kind: 'bool', def }, val(k, def))),
-      form.row({ key: 'hook_spawn_match_strength', label: 'Рыба钩大小影响出Рыба', help: '0 表示不影响；1 表示大钩更容易钓到大Рыба、小钩更容易钓到小Рыба；2 更明显。选「Распределение по категориям」时不起作用。', kind: 'float', min: 0, max: 2, def: '0' }, val('hook_spawn_match_strength', '0'))) }));
+      form.row({ key: 'hook_spawn_match_strength', label: 'Влияние размера крючка на появление рыбы', help: '0 — не влияет; 1 — крупный крючок повышает шанс крупной рыбы, маленький — мелкой; 2 — более выраженный эффект. Не действует при распределении улова по категориям.', kind: 'float', min: 0, max: 2, def: '0' }, val('hook_spawn_match_strength', '0'))) }));
 }
 
 // Доли четырёх категорий编辑：输入相对权重，实时显示换算后的百分比
@@ -157,7 +157,7 @@ function gradeEditor(form, set, t, interactive) {
 function ratioHandle(i, fields, readWeights, track, refresh) {
   const label = GRADES[i][1] + ' / ' + GRADES[i + 1][1];
   const handle = h('button', { type: 'button', class: 'grade-ratio-handle', role: 'slider',
-    'aria-label': label, title: label + '（拖动或按左右方向键调整）' });
+    'aria-label': label, title: label + '(перетащите или используйте клавиши со стрелками)' });
   function transfer(weights, delta) {
     const left = weights[i], pair = left + weights[i + 1];
     const next = Math.max(0, pair - 100, Math.min(100, pair, left + delta));
