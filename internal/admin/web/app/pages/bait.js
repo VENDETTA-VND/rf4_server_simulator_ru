@@ -1,8 +1,8 @@
-// РыбаНаживка偏好：每种Рыба吃什么、不吃什么，可以按Время轮换。
+// Предпочтения рыб по наживкам：Что ест каждый вид рыбы и чего избегает; предпочтения можно менять по расписанию.
 import { h, api, toast, errText, pageHead, callout, badge, btn, empty, loading, searchBox, debounce, drawer, dialog, confirmDialog, segmented, toggleEl, icon } from '../core.js';
 
-const DIET = [['lure', '拟Наживка'], ['worm', '蠕虫'], ['fish', 'НаживкаРыба'], ['boilie', '煮Наживка'], ['plant', '植物'], ['crustacean', '甲壳类']];
-const WILDCARD = [['各类Наживка', '所有Наживка料'], ['拟Наживка', '所有拟Наживка'], ['活Наживка类', '所有活Наживка'], ['НаживкаРыба类', '所有НаживкаРыба']];
+const DIET = [['lure', 'Искусственные приманки'], ['worm', '蠕虫'], ['fish', 'Рыбная наживка'], ['boilie', '煮Наживка'], ['plant', '植物'], ['crustacean', '甲壳类']];
+const WILDCARD = [['各类Наживка', 'Все наживки'], ['Искусственные приманки', '所有Искусственные приманки'], ['活Наживка类', 'Все живые наживки'], ['Рыбная наживка类', '所有Рыбная наживка']];
 let Q = '', LOC = '', FILTER = 'all';
 
 const put = (path, body) => api(path, { method: 'PUT', body: JSON.stringify(body) });
@@ -18,37 +18,37 @@ export default async function bait() {
     try {
       const d = await api('/api/bait/prefs?limit=2000&q=' + encodeURIComponent(Q) + '&loc=' + encodeURIComponent(LOC));
       rows = d.rows || [];
-      banner.replaceChildren(d.rules_enabled === true ? '' : h('div', { style: { marginBottom: '16px' } }, callout('warn', h('span', {}, '「Рыба会挑Наживка」ПравилаСейчас是关闭的，这里的设置暂时不影响钓Рыба。', h('a', { href: '#rules', text: ' 去打开 →' })))));
+      banner.replaceChildren(d.rules_enabled === true ? '' : h('div', { style: { marginBottom: '16px' } }, callout('warn', h('span', {}, 'Правило «Рыба выбирает наживку» сейчас выключено. Эти настройки пока не влияют на клёв.', h('a', { href: '#rules', text: ' Включить →' })))));
       draw();
     } catch (e) { tbody.replaceChildren(h('tr', {}, h('td', { colspan: 5 }, empty('Не удалось загрузить', errText(e))))); }
   }
   function draw() {
     const list = rows.filter((r) => FILTER === 'all' || (FILTER === 'rule' && r.has_rule) || (FILTER === 'none' && !r.has_rule) || (FILTER === 'edited' && r.source === 'override'));
-    count.textContent = `${list.length} 种Рыба`;
+    count.textContent = `${list.length} видов рыб`;
     tbody.replaceChildren(...(list.length ? list.map((r) => h('tr', { style: { cursor: 'pointer' }, onclick: () => editFish(r, load) },
       h('td', {}, h('b', { text: r.name_zh }), h('span', { class: 'sub', text: (r.locs || []).slice(0, 3).join('、') + ((r.locs || []).length > 3 ? ' 等' : '') })),
       h('td', { style: { whiteSpace: 'normal', maxWidth: '460px' } }, r.has_rule
-        ? h('div', { class: 'small' }, chipsInline(r.allow), (r.deny || []).length ? h('div', { class: 'muted', text: '不吃：' + r.deny.join('、') }) : null)
-        : h('span', { class: 'muted small', text: '没有设置，按实际钓获数据判断' })),
-      h('td', {}, r.diet ? (r.lure_ok ? badge('会', 'ok') : badge('不会')) : h('span', { class: 'muted', text: '—' })),
+        ? h('div', { class: 'small' }, chipsInline(r.allow), (r.deny || []).length ? h('div', { class: 'muted', text: 'Не ест: ' + r.deny.join('、') }) : null)
+        : h('span', { class: 'muted small', text: 'Не задано. Решение принимается по фактическим данным улова.' })),
+      h('td', {}, r.diet ? (r.lure_ok ? badge('Да', 'ok') : badge('不Да')) : h('span', { class: 'muted', text: '—' })),
       h('td', {}, layerBar(r.layer, 120)),
-      h('td', {}, r.source === 'override' ? (r.enabled ? badge('改过', 'warn') : badge('改过·已停用')) : h('span', { class: 'muted small', text: '默认' }),
-        r.rotation && r.rotation.enabled ? badge('轮换中', 'accent') : null))) : [h('tr', {}, h('td', { colspan: 5 }, empty('没有符合条件的Рыба')))]));
+      h('td', {}, r.source === 'override' ? (r.enabled ? badge('改过', 'warn') : badge('Изменено · отключено')) : h('span', { class: 'muted small', text: '默认' }),
+        r.rotation && r.rotation.enabled ? badge('Ротация включена', 'accent') : null))) : [h('tr', {}, h('td', { colspan: 5 }, empty('没有符合条件的Рыба')))]));
   }
   load();
   const locSel = h('select', { class: 'select', style: { width: '180px' }, onchange: (e) => { LOC = e.target.value; load(); } },
-    h('option', { value: '', text: '所有水域' }), (Array.isArray(areas) ? areas : []).map((a) => h('option', { value: a.loc, text: a.loc, selected: a.loc === LOC })));
+    h('option', { value: '', text: 'Все водоёмы' }), (Array.isArray(areas) ? areas : []).map((a) => h('option', { value: a.loc, text: a.loc, selected: a.loc === LOC })));
   return h('div', { class: 'page' },
-    pageHead('РыбаНаживка偏好', '每种Рыба爱吃什么、不吃什么。点一种Рыба查看和修改。需要在「Правила игры」里打开「Рыба会挑Наживка」才生效。'),
+    pageHead('Предпочтения рыб по наживкам', '每видов рыбПредпочитает什么、不吃什么。点一видов рыб查看和修改。需要在「Правила игры」里打开「РыбаДа挑Наживка」才生效。'),
     banner,
     h('div', { class: 'card card-pad' },
       h('div', { class: 'row', style: { marginBottom: '14px' } },
-        h('div', { class: 'grow', style: { maxWidth: '320px' } }, searchBox('ПоискРыба名，如 狗Рыба', debounce((v) => { Q = v; load(); }, 300), Q)),
+        h('div', { class: 'grow', style: { maxWidth: '320px' } }, searchBox('Поиск по названию рыбы', debounce((v) => { Q = v; load(); }, 300), Q)),
         locSel,
-        segmented([['all', 'Все'], ['rule', '已设置'], ['none', '没设置'], ['edited', '我改过的']], FILTER, (v) => { FILTER = v; draw(); }),
+        segmented([['all', 'Все'], ['rule', 'Настроено'], ['none', 'Не настроено'], ['edited', 'Изменено мной']], FILTER, (v) => { FILTER = v; draw(); }),
         h('span', { class: 'spacer' }), count),
       h('div', { class: 'table-wrap', style: { maxHeight: 'calc(100vh - 260px)' } }, h('table', { class: 'table' },
-        h('thead', {}, h('tr', {}, h('th', { text: 'Рыба' }), h('th', { text: '爱吃' }), h('th', { text: '咬拟Наживка' }), h('th', { text: '活动水层' }), h('th', { text: 'Статус' }))), tbody))));
+        h('thead', {}, h('tr', {}, h('th', { text: 'Рыба' }), h('th', { text: 'Предпочитает' }), h('th', { text: '咬Искусственные приманки' }), h('th', { text: 'Рабочий горизонт' }), h('th', { text: 'Статус' }))), tbody))));
 }
 
 function chipsInline(list) {
@@ -60,7 +60,7 @@ function chipsInline(list) {
 function layerBar(layer, width = 200) {
   if (!layer || !(layer[0] || layer[2])) return h('span', { class: 'muted', text: '—' });
   const [lo, best, hi] = layer;
-  return h('div', { title: `活动在 ${(lo * 100).toFixed(0)}%–${(hi * 100).toFixed(0)}% 深度，最爱 ${(best * 100).toFixed(0)}%（0 = 水面，100% = 水底）`, style: { position: 'relative', width: width + 'px', height: '10px', borderRadius: '5px', background: 'var(--surface-4)' } },
+  return h('div', { title: `Активность на глубине ${(lo * 100).toFixed(0)}%–${(hi * 100).toFixed(0)}%, предпочитаемая глубина ${(best * 100).toFixed(0)}%(0 = поверхность, 100% = дно)`, style: { position: 'relative', width: width + 'px', height: '10px', borderRadius: '5px', background: 'var(--surface-4)' } },
     h('div', { style: { position: 'absolute', left: Math.max(0, lo * 100) + '%', width: Math.max(2, (Math.min(1, hi) - Math.max(0, lo)) * 100) + '%', top: 0, bottom: 0, borderRadius: '5px', background: 'var(--accent)', opacity: 0.55 } }),
     h('div', { style: { position: 'absolute', left: `calc(${Math.max(0, Math.min(1, best)) * 100}% - 1px)`, top: '-2px', bottom: '-2px', width: '2px', background: '#fff' } }));
 }
@@ -85,11 +85,11 @@ function editFish(r, reload) {
     const rot = r.rotation || {};
     body.replaceChildren(...[
       h('h3', { style: { fontSize: '14px', margin: '0 0 2px' }, text: '吃什么' }),
-      bucket('爱吃', '这些Наживка可以钓到它。', st.allow),
+      bucket('Предпочитает', '这些Наживка可以钓到它。', st.allow),
       bucket('不吃', '用这些Наживка钓不到它。', st.deny),
       bucket('底钓时只吃', '底钓时只认这些Наживка。留空表示不限制。', st.bottom),
       h('h3', { style: { fontSize: '14px', margin: '22px 0 2px' }, text: '定时轮换' }),
-      h('p', { class: 'muted small', style: { marginBottom: '8px' }, text: '让它在不同时段爱吃不同的Наживка。至少两组、间隔大于 0 才会轮换。' }),
+      h('p', { class: 'muted small', style: { marginBottom: '8px' }, text: '让它在不同时段Предпочитает不同的Наживка。至少两组、间隔大于 0 才Да轮换。' }),
       rot.enabled ? callout('info', `正在轮换：第 ${rot.active + 1}/${rot.total} 组（${(rot.active_baits || []).join('、')}）`) : null,
       ...st.groups.map((g, i) => h('div', { style: { padding: '10px 0', borderTop: '1px solid var(--line)' } },
         h('div', { class: 'row', style: { justifyContent: 'space-between', marginBottom: '6px' } }, h('b', { class: 'small', text: '第 ' + (i + 1) + ' 组' }),
@@ -138,10 +138,10 @@ function habits(r) {
         h('div', { style: { position: 'absolute', inset: '0 auto 0 0', width: Math.min(100, v / 2.2 * 100) + '%', background: likes ? 'var(--ok)' : 'var(--faint)', borderRadius: '4px' } })),
       h('span', { class: likes ? '' : 'muted', style: { width: '56px', textAlign: 'right' }, text: likes ? '喜欢' : '一般' }));
   });
-  return h('details', { class: 'advanced', style: { marginTop: '22px' } }, h('summary', {}, '这种Рыба的习性 ', h('small', { text: '（参考数据，只读）' })),
+  return h('details', { class: 'advanced', style: { marginTop: '22px' } }, h('summary', {}, '这видов рыб的习性 ', h('small', { text: '（参考数据，只读）' })),
     h('div', { class: 'stack', style: { paddingTop: '12px' } },
-      h('div', {}, h('div', { class: 'small text-2', style: { marginBottom: '6px' }, text: r.lure_ok ? '会咬拟Наживка。' : '不咬拟Наживка。' }), h('div', { class: 'stack', style: { gap: '5px' } }, bars)),
-      h('div', {}, h('div', { class: 'small text-2', style: { marginBottom: '6px' }, text: '活动水层（左边水面，右边水底，白线是最爱的深度）' }), layerBar(r.layer, 320)),
+      h('div', {}, h('div', { class: 'small text-2', style: { marginBottom: '6px' }, text: r.lure_ok ? 'Да咬Искусственные приманки。' : '不咬Искусственные приманки。' }), h('div', { class: 'stack', style: { gap: '5px' } }, bars)),
+      h('div', {}, h('div', { class: 'small text-2', style: { marginBottom: '6px' }, text: 'Рабочий горизонт（左边水面，右边水底，白线是最爱的深度）' }), layerBar(r.layer, 320)),
       (r.baits || []).length ? h('div', { class: 'small muted', text: '实际钓获最多的Наживка：' + r.baits.slice(0, 8).map((b) => b.bait_id).join('、') }) : null,
       r.qual_g ? h('div', { class: 'small muted', text: `Зачётная约 ${r.qual_g} g${r.trophy_g ? `，Трофей约 ${r.trophy_g} g` : ''}。` }) : null));
 }
@@ -171,7 +171,7 @@ function pickBait(target, onPick) {
         h('div', { class: 'grow' }, h('div', { class: 'title', text: x.name_zh || x.item_id }), h('div', { class: 'sub mono', text: x.item_id })), h('span', { class: 'muted small', text: x.sub_label || '' })))) : empty('Ничего не найдено'));
     } catch (e) { results.replaceChildren(empty('Не удалось загрузить', errText(e))); }
   }
-  const seg = segmented([['27', 'Наживка料'], ['17', '拟Наживка'], ['-1', '一整类']], '27', (v) => { cat = Number(v); sub = 0; input.hidden = cat === -1; subSel.hidden = cat === -1; fillSub(); load(); });
+  const seg = segmented([['27', 'Наживка料'], ['17', 'Искусственные приманки'], ['-1', '一整类']], '27', (v) => { cat = Number(v); sub = 0; input.hidden = cat === -1; subSel.hidden = cat === -1; fillSub(); load(); });
   const { close } = dialog({ title: `添加到「${target}」`, size: 'lg', body: h('div', { class: 'stack' }, h('div', { class: 'row' }, seg, subSel), input, results) });
   (CATS ? Promise.resolve() : api('/api/bait/categories').then((d) => { CATS = d.categories || []; }).catch(() => { CATS = []; })).then(() => { fillSub(); load(); });
 }
