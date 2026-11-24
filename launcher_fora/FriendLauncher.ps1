@@ -38,7 +38,7 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     exit
 }
 
-$script:Cfg = @{ server_ip = ''; game_path = ''; game_region = 'CN'; account_username = ''; account_password_protected = ''; account_uid = 0 }
+$script:Cfg = @{ server_ip = ''; game_path = ''; game_region = 'CN'; account_username = ''; account_password_protected = ''; account_uid = 0; auto_login = $true }
 if (Test-Path $script:ConfigPath) {
     try {
         $loaded = Get-Content -LiteralPath $script:ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -48,6 +48,7 @@ if (Test-Path $script:ConfigPath) {
         if ($loaded.account_username) { $script:Cfg.account_username = [string]$loaded.account_username }
         if ($loaded.account_password_protected) { $script:Cfg.account_password_protected = [string]$loaded.account_password_protected }
         if ($loaded.account_uid) { $script:Cfg.account_uid = [int64]$loaded.account_uid }
+        if ($null -ne $loaded.auto_login) { $script:Cfg.auto_login = [bool]$loaded.auto_login }
     } catch { [System.Windows.Forms.MessageBox]::Show("Не удалось прочитать config.json: $($_.Exception.Message)", 'RF4 Friend Launcher') | Out-Null }
 }
 
@@ -55,6 +56,7 @@ function Save-Config {
     $script:Cfg.server_ip = $ipBox.Text.Trim()
     $script:Cfg.game_path = $gameBox.Text.Trim()
     $script:Cfg.game_region = $regionBox.Text.Trim()
+    $script:Cfg.auto_login = $autoLoginCheck.Checked
     $script:Cfg | ConvertTo-Json | Set-Content -LiteralPath $script:ConfigPath -Encoding UTF8
 }
 function Save-AccountCredentials {
@@ -121,7 +123,13 @@ function Invoke-AccountAction {
     Save-GameSession -Username $username -LoginToken ([string]$result.login_token) -TokenTimestamp ([long]$result.token_timestamp)
     Save-AccountCredentials -UID ([long]$result.uid)
     $uidLabel.Text = "UID: $($result.uid)"
-    $statusLabel.Text = "Аккаунт '$username' авторизован (UID $($result.uid)); данные сохранены."
+    $savedUid = [int64]$script:Cfg.account_uid
+    if ($savedUid -gt 0 -and $savedUid -ne [int64]$result.uid) {
+        $statusLabel.Text = "Внимание: UID аккаунта изменился с $savedUid на $($result.uid)."
+        [System.Windows.Forms.MessageBox]::Show("Сервер вернул другой UID ($($result.uid)). Старый UID ($savedUid) не используется для входа.", 'Проверка UID', 'OK', 'Warning') | Out-Null
+    } else {
+        $statusLabel.Text = "Аккаунт '$username' авторизован · UID $($result.uid) · данные сохранены."
+    }
 }
 function Get-HostsTextInfo {
     if (-not (Test-Path -LiteralPath $script:HostsPath)) { throw "Не найден hosts: $script:HostsPath" }
@@ -212,111 +220,122 @@ function Launch-Game {
 $form = New-Object System.Windows.Forms.Form
 $form.Text = 'RF4 — лаунчер для друзей'
 $form.StartPosition = 'CenterScreen'
-$form.Size = New-Object System.Drawing.Size(590, 505)
-$form.MinimumSize = New-Object System.Drawing.Size(590, 505)
+$form.Size = New-Object System.Drawing.Size(650, 575)
+$form.MinimumSize = New-Object System.Drawing.Size(650, 575)
 $form.Font = New-Object System.Drawing.Font('Segoe UI', 10)
 $form.BackColor = [System.Drawing.Color]::FromArgb(245, 247, 250)
 
 $title = New-Object System.Windows.Forms.Label
-$title.Text = 'Подключение к Русскому серверу RF4'
-$title.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 15)
+$title.Text = 'RF4 Friend Launcher'
+$title.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 16)
 $title.Location = New-Object System.Drawing.Point(22, 18)
 $title.Size = New-Object System.Drawing.Size(530, 32)
 $form.Controls.Add($title)
 
 $ipLabel = New-Object System.Windows.Forms.Label
-$ipLabel.Text = 'Внешний IP моего сервера:'
-$ipLabel.Location = New-Object System.Drawing.Point(25, 70)
+$ipLabel.Text = 'IP-адрес сервера'
+$ipLabel.Location = New-Object System.Drawing.Point(35, 75)
 $ipLabel.Size = New-Object System.Drawing.Size(220, 24)
 $form.Controls.Add($ipLabel)
 $ipBox = New-Object System.Windows.Forms.TextBox
-$ipBox.Location = New-Object System.Drawing.Point(250, 67)
-$ipBox.Size = New-Object System.Drawing.Size(290, 27)
+$ipBox.Location = New-Object System.Drawing.Point(190, 72)
+$ipBox.Size = New-Object System.Drawing.Size(410, 27)
 $ipBox.Text = $script:Cfg.server_ip
 $form.Controls.Add($ipBox)
 
 $accountLabel = New-Object System.Windows.Forms.Label
-$accountLabel.Text = 'Аккаунт:'
-$accountLabel.Location = New-Object System.Drawing.Point(25, 110)
-$accountLabel.Size = New-Object System.Drawing.Size(80, 24)
+$accountLabel.Text = 'АККАУНТ'
+$accountLabel.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 11)
+$accountLabel.Location = New-Object System.Drawing.Point(25, 115)
+$accountLabel.Size = New-Object System.Drawing.Size(130, 24)
 $form.Controls.Add($accountLabel)
 $usernameBox = New-Object System.Windows.Forms.TextBox
-$usernameBox.Location = New-Object System.Drawing.Point(110, 107)
-$usernameBox.Size = New-Object System.Drawing.Size(180, 27)
+$usernameLabel = New-Object System.Windows.Forms.Label
+$usernameLabel.Text = 'Логин'
+$usernameLabel.Location = New-Object System.Drawing.Point(25, 145)
+$usernameLabel.Size = New-Object System.Drawing.Size(70, 24)
+$form.Controls.Add($usernameLabel)
+$usernameBox.Location = New-Object System.Drawing.Point(90, 142)
+$usernameBox.Size = New-Object System.Drawing.Size(220, 27)
 $form.Controls.Add($usernameBox)
 $passwordBox = New-Object System.Windows.Forms.TextBox
-$passwordBox.Location = New-Object System.Drawing.Point(300, 107)
-$passwordBox.Size = New-Object System.Drawing.Size(240, 27)
+$passwordLabel = New-Object System.Windows.Forms.Label
+$passwordLabel.Text = 'Пароль'
+$passwordLabel.Location = New-Object System.Drawing.Point(325, 145)
+$passwordLabel.Size = New-Object System.Drawing.Size(70, 24)
+$form.Controls.Add($passwordLabel)
+$passwordBox.Location = New-Object System.Drawing.Point(395, 142)
+$passwordBox.Size = New-Object System.Drawing.Size(205, 27)
 $passwordBox.UseSystemPasswordChar = $true
 $form.Controls.Add($passwordBox)
 $registerButton = New-Object System.Windows.Forms.Button
 $registerButton.Text = 'Регистрация'
-$registerButton.Location = New-Object System.Drawing.Point(110, 137)
-$registerButton.Size = New-Object System.Drawing.Size(180, 25)
+$registerButton.Location = New-Object System.Drawing.Point(90, 178)
+$registerButton.Size = New-Object System.Drawing.Size(220, 30)
 $form.Controls.Add($registerButton)
 $loginButton = New-Object System.Windows.Forms.Button
 $loginButton.Text = 'Войти в аккаунт'
-$loginButton.Location = New-Object System.Drawing.Point(300, 137)
-$loginButton.Size = New-Object System.Drawing.Size(240, 25)
+$loginButton.Location = New-Object System.Drawing.Point(325, 178)
+$loginButton.Size = New-Object System.Drawing.Size(275, 30)
 $form.Controls.Add($loginButton)
 $rememberLabel = New-Object System.Windows.Forms.Label
 $rememberLabel.Text = 'Пароль хранится зашифрованным для этого пользователя Windows'
-$rememberLabel.Location = New-Object System.Drawing.Point(110, 164)
-$rememberLabel.Size = New-Object System.Drawing.Size(430, 22)
+$rememberLabel.Location = New-Object System.Drawing.Point(90, 213)
+$rememberLabel.Size = New-Object System.Drawing.Size(510, 20)
 $rememberLabel.Font = New-Object System.Drawing.Font('Segoe UI', 8)
 $rememberLabel.ForeColor = [System.Drawing.Color]::FromArgb(90, 100, 115)
 $form.Controls.Add($rememberLabel)
 $uidLabel = New-Object System.Windows.Forms.Label
 $uidLabel.Text = 'UID: —'
-$uidLabel.Location = New-Object System.Drawing.Point(25, 355)
-$uidLabel.Size = New-Object System.Drawing.Size(220, 24)
+$uidLabel.Location = New-Object System.Drawing.Point(25, 405)
+$uidLabel.Size = New-Object System.Drawing.Size(180, 24)
 $uidLabel.Font = New-Object System.Drawing.Font('Segoe UI Semibold', 9)
 $form.Controls.Add($uidLabel)
 $serverButton = New-Object System.Windows.Forms.Button
 $serverButton.Text = 'Играть на моём сервере'
-$serverButton.Location = New-Object System.Drawing.Point(25, 165)
-$serverButton.Size = New-Object System.Drawing.Size(250, 42)
+$serverButton.Location = New-Object System.Drawing.Point(25, 105)
+$serverButton.Size = New-Object System.Drawing.Size(275, 38)
 $serverButton.BackColor = [System.Drawing.Color]::FromArgb(35, 110, 190)
 $serverButton.ForeColor = [System.Drawing.Color]::White
 $serverButton.FlatStyle = 'Flat'
 $form.Controls.Add($serverButton)
 $officialButton = New-Object System.Windows.Forms.Button
 $officialButton.Text = 'Обычная / официальная игра'
-$officialButton.Location = New-Object System.Drawing.Point(290, 165)
-$officialButton.Size = New-Object System.Drawing.Size(250, 42)
+$officialButton.Location = New-Object System.Drawing.Point(325, 105)
+$officialButton.Size = New-Object System.Drawing.Size(275, 38)
 $officialButton.FlatStyle = 'Flat'
 $form.Controls.Add($officialButton)
 
 $gameLabel = New-Object System.Windows.Forms.Label
 $gameLabel.Text = 'Путь к игре (rf4_x64.exe):'
-$gameLabel.Location = New-Object System.Drawing.Point(25, 230)
+$gameLabel.Location = New-Object System.Drawing.Point(25, 255)
 $gameLabel.Size = New-Object System.Drawing.Size(230, 24)
 $form.Controls.Add($gameLabel)
 $gameBox = New-Object System.Windows.Forms.TextBox
-$gameBox.Location = New-Object System.Drawing.Point(25, 257)
-$gameBox.Size = New-Object System.Drawing.Size(420, 27)
+$gameBox.Location = New-Object System.Drawing.Point(25, 282)
+$gameBox.Size = New-Object System.Drawing.Size(500, 27)
 $gameBox.Text = $script:Cfg.game_path
 $form.Controls.Add($gameBox)
 $browseButton = New-Object System.Windows.Forms.Button
 $browseButton.Text = 'Обзор…'
-$browseButton.Location = New-Object System.Drawing.Point(455, 255)
+$browseButton.Location = New-Object System.Drawing.Point(535, 280)
 $browseButton.Size = New-Object System.Drawing.Size(85, 30)
 $form.Controls.Add($browseButton)
 
 $regionLabel = New-Object System.Windows.Forms.Label
 $regionLabel.Text = 'Регион:'
-$regionLabel.Location = New-Object System.Drawing.Point(25, 300)
+$regionLabel.Location = New-Object System.Drawing.Point(25, 325)
 $regionLabel.Size = New-Object System.Drawing.Size(65, 24)
 $form.Controls.Add($regionLabel)
 $regionBox = New-Object System.Windows.Forms.TextBox
-$regionBox.Location = New-Object System.Drawing.Point(95, 297)
+$regionBox.Location = New-Object System.Drawing.Point(95, 322)
 $regionBox.Size = New-Object System.Drawing.Size(90, 27)
 $regionBox.Text = $script:Cfg.game_region
 $form.Controls.Add($regionBox)
 $launchButton = New-Object System.Windows.Forms.Button
 $launchButton.Text = 'ЗАПУСТИТЬ ИГРУ'
-$launchButton.Location = New-Object System.Drawing.Point(355, 294)
-$launchButton.Size = New-Object System.Drawing.Size(185, 38)
+$launchButton.Location = New-Object System.Drawing.Point(400, 317)
+$launchButton.Size = New-Object System.Drawing.Size(200, 42)
 $launchButton.BackColor = [System.Drawing.Color]::FromArgb(35, 145, 90)
 $launchButton.ForeColor = [System.Drawing.Color]::White
 $launchButton.FlatStyle = 'Flat'
@@ -324,10 +343,24 @@ $form.Controls.Add($launchButton)
 
 $statusLabel = New-Object System.Windows.Forms.Label
 $statusLabel.Text = 'Режим: не выбран (системный hosts не изменён)'
-$statusLabel.Location = New-Object System.Drawing.Point(250, 355)
-$statusLabel.Size = New-Object System.Drawing.Size(290, 55)
+$statusLabel.Location = New-Object System.Drawing.Point(215, 398)
+$statusLabel.Size = New-Object System.Drawing.Size(385, 55)
 $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(70, 80, 95)
 $form.Controls.Add($statusLabel)
+$autoLoginCheck = New-Object System.Windows.Forms.CheckBox
+$autoLoginCheck.Text = 'Автоматически входить при запуске'
+$autoLoginCheck.Checked = [bool]$script:Cfg.auto_login
+$autoLoginCheck.Location = New-Object System.Drawing.Point(25, 240)
+$autoLoginCheck.Size = New-Object System.Drawing.Size(320, 24)
+$form.Controls.Add($autoLoginCheck)
+
+$hintLabel = New-Object System.Windows.Forms.Label
+$hintLabel.Text = 'Логин и пароль сохраняются локально; UID назначает только сервер.'
+$hintLabel.Location = New-Object System.Drawing.Point(25, 430)
+$hintLabel.Size = New-Object System.Drawing.Size(575, 22)
+$hintLabel.Font = New-Object System.Drawing.Font('Segoe UI', 8)
+$hintLabel.ForeColor = [System.Drawing.Color]::FromArgb(95, 105, 120)
+$form.Controls.Add($hintLabel)
 
 $browseButton.Add_Click({
     $dialog = New-Object System.Windows.Forms.OpenFileDialog
@@ -340,6 +373,11 @@ $loginButton.Add_Click({ try { Invoke-AccountAction -Action 'login' } catch { [S
 $serverButton.Add_Click({ try { Set-ServerHosts } catch { [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Не удалось переключить hosts', 'OK', 'Error') | Out-Null } })
 $officialButton.Add_Click({ try { Set-OfficialHosts } catch { [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Не удалось вернуть официальный режим', 'OK', 'Error') | Out-Null } })
 Load-SavedAccount
+$form.Add_Shown({
+    if ($autoLoginCheck.Checked -and $usernameBox.Text.Trim() -and $passwordBox.Text) {
+        try { Invoke-AccountAction -Action 'login' } catch { $statusLabel.Text = 'Автовход не выполнен: сервер недоступен или данные устарели.' }
+    }
+})
 $launchButton.Add_Click({ try { Launch-Game } catch { [System.Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Не удалось запустить игру', 'OK', 'Error') | Out-Null } })
 
 # Показываем активный режим только если найдены именно наши помеченные строки.
