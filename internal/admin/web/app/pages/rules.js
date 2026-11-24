@@ -2,23 +2,23 @@
 import { h, api, post, icon, toast, errText, pageHead, section, callout, badge, Form, savebar, setLeaveGuard, confirmDialog, render } from '../core.js';
 
 const STYLES = [
-  ['realistic', '真实Рыба汛', 'Рыба按习性、天气、Место和Наживка料决定咬不咬。要研究钓点、选对Наживка，更接近真实钓Рыба。', 'Все шесть правил ниже включены, кроме «Счастливых часов».'],
-  ['legacy', 'Полностью случайный режим', '任何Рыба都可能咬任何Наживка，出Рыба完Полностью случайный режим。轻松，适合随便玩玩。', 'Все шесть правил ниже выключены, кроме «Счастливых часов».'],
+  ['realistic', 'Реалистичный клёв', 'Рыба клюёт с учётом повадок, погоды, места и наживки. Изучайте точки ловли и подбирайте подходящую наживку для более реалистичной рыбалки.', 'Все шесть правил ниже включены, кроме «Счастливых часов».'],
+  ['legacy', 'Полностью случайный режим', 'Любая рыба может клюнуть на любую наживку. Полностью случайный режим для непринуждённой игры.', 'Все шесть правил ниже выключены, кроме «Счастливых часов».'],
 ];
 export const RULE_SWITCHES = [
-  ['bite_gate_enabled', 'Наживка要对口', '拟Наживка不会钓到不吃拟Наживка的Рыба（如泥鳅、鲤科Рыба）；钓层不对时几乎不咬。', '0'],
-  ['fish_ecology_enabled', 'Рыба种习性', '252 种Рыба各按习性决定咬不咬：水层、昼夜、季节、天气、水底环境、拟Наживка动作都有影响。', '0'],
-  ['fish_weather_enabled', 'Погода и температура воды', '游戏里的气温和天气会影响Рыба口；底钓、浮钓时Рыба会断断续续地试口。', '0'],
-  ['fish_distribution_enabled', 'Рыба群分布', '每种Рыба只在地图的特定区域出没，每 4 个游戏小时重新分布一次。', '0'],
-  ['fish_bait_rules_enabled', 'Рыба会挑Наживка', '根据钩上挂的Наживка决定会来哪些Рыба。每种Рыба爱吃什么在「РыбаНаживка偏好」里设置。', '0'],
-  ['happy_hour_enabled', 'Счастливые часы', 'ПодпискаВ сети钓Рыба时：经验 +50%、Рыба口 +10%、熟练度提升机会 +25%，没有每日时长限制。', '1'],
+  ['bite_gate_enabled', 'Подходящая наживка', 'Рыба, которая не питается искусственными приманками (например, вьюн или карповые), на них не клюёт. При неверно выбранном горизонте поклёвок почти не будет.', '0'],
+  ['fish_ecology_enabled', 'Повадки рыб', 'Для 252 видов рыб клёв зависит от повадок, глубины, времени суток, сезона, погоды, рельефа дна и проводки искусственной приманки.', '0'],
+  ['fish_weather_enabled', 'Погода и температура воды', 'Температура и погода влияют на активность рыбы. При донной и поплавочной ловле рыба может периодически пробовать наживку.', '0'],
+  ['fish_distribution_enabled', 'Распределение стай', 'Каждый вид рыбы встречается в определённых зонах карты. Распределение обновляется каждые 4 игровых часа.', '0'],
+  ['fish_bait_rules_enabled', 'Рыба выбирает наживку', 'Список возможной добычи зависит от наживки на крючке. Предпочтения видов настраиваются в разделе «Предпочтения рыб по наживкам».', '0'],
+  ['happy_hour_enabled', 'Счастливые часы', 'При активной подписке во время рыбалки: опыт +50%, частота поклёвок +10%, шанс роста навыка +25%. Ограничения по времени в день нет.', '1'],
 ];
 const SPAWN = [
-  ['grade_ratio', '按比例出Рыба', '直接设定未Зачётная、Зачётная、Трофей、Голубая корона四档Рыба各占多少。最直观。'],
-  ['fish_hunt', 'Рыба猎四阶段', '淡水按「日常 → 聚Рыба → 发窝 → 巨物」四个阶段逐步出好Рыба，海钓和路亚同样适用。'],
-  ['two_stage', 'Обычный режим / прикормка', '底钓、浮钓只有「日常」和「После прикормки」两档，各自设定比例。海钓、路亚仍按四阶段。'],
+  ['grade_ratio', 'Распределение по категориям', 'Задайте доли четырёх категорий улова: незачётная, зачётная, трофейная и с голубой короной.'],
+  ['fish_hunt', 'Четыре стадии клёва', 'Для пресноводной ловли качество улова проходит четыре стадии: обычная ловля → сбор рыбы → активный клёв → крупная рыба. Также применяется к морской и спиннинговой ловле.'],
+  ['two_stage', 'Обычный режим / прикормка', 'Для донной и поплавочной ловли доступны два этапа — обычный и после прикормки. Для морской и спиннинговой ловли сохраняются четыре этапа.'],
 ];
-const GRADES = [['below', '未Зачётная', '#7f8b9a'], ['qualified', 'Зачётная', '#4cb3d4'], ['trophy', 'Трофей', '#e0a743'], ['super', 'Голубая корона', '#9d7cf0']];
+const GRADES = [['below', 'Незачётная', '#7f8b9a'], ['qualified', 'Зачётная', '#4cb3d4'], ['trophy', 'Трофей', '#e0a743'], ['super', 'Голубая корона', '#9d7cf0']];
 const GRADE_SETS = {
   grade_ratio: [{ prefix: 'grade_pct_', title: 'Доли четырёх категорий', defs: [3, 87.5, 9, 0.5] }],
   two_stage: [
@@ -27,10 +27,10 @@ const GRADE_SETS = {
   ],
 };
 const OTHER = [
-  ['condition_health_enabled', 'Голод и холод уменьшают здоровье', '关闭后生命值始终是满的，药品也不会消耗。', '1'],
-  ['condition_fishing_pause_enabled', '钓Рыба时精力不恢复', '竿在水里时精力暂停恢复，收竿后再恢复。关闭则一直正常恢复。', '1'],
-  ['hook_nibble_enabled', 'Рыба会先嘬Наживка', 'Рыба咬钩前先轻嘬几下，抬竿太早会钓空。关闭后第一次抬竿不会判嘬Наживка。', '0'],
-  ['bite_pace_enabled', 'Наживка效控速', '开启后来Рыба快慢由Наживка与动作共同决定：底钓/浮钓看Наживка对不对口；路亚/海钓铁板还看收线动作对不对口——Наживка与动作都对口时 1.5~6 秒内来Рыба，动作不对口像差Наживка一样长Время才有Рыба。只控节奏，不改出什么Рыба。', '0'],
+  ['condition_health_enabled', 'Голод и холод уменьшают здоровье', 'После отключения здоровье всегда будет полным, а лекарства не будут расходоваться.', '1'],
+  ['condition_fishing_pause_enabled', 'Энергия не восстанавливается во время рыбалки', 'Пока снасть находится в воде, энергия не восстанавливается. После выматывания снасти восстановление продолжится. При отключении этого параметра энергия восстанавливается постоянно.', '1'],
+  ['hook_nibble_enabled', 'Рыба пробует наживку перед поклёвкой', 'Перед поклёвкой рыба несколько раз пробует наживку. Если подсечь слишком рано, поклёвка будет пустой. При отключении первая подсечка не считается пробой наживки.', '0'],
+  ['bite_pace_enabled', 'Скорость клёва зависит от наживки', 'После включения скорость клёва зависит от наживки и техники проводки. Для донной и поплавочной ловли учитывается соответствие наживки, для спиннинга и морской ловли — также правильность проводки. При полном соответствии поклёвка происходит за 1,5–6 секунд. Параметр меняет только темп клёва, но не состав улова.', '0'],
 ];
 
 export default async function rules() {
@@ -40,7 +40,7 @@ export default async function rules() {
   savebar(form, {
     onSave: async (values) => {
       for (const [key, value] of Object.entries(values)) await post('/api/tunables', { key, value: String(value) });
-      toast('已Сохранить，约 30 秒内生效');
+      toast('Сохранено. Вступит в силу примерно через 30 секунд.');
       render();
     },
   });
@@ -54,15 +54,15 @@ export default async function rules() {
       type: 'button', class: 'card', style: { textAlign: 'left', padding: '18px 20px', cursor: on ? 'default' : 'pointer', borderColor: on ? 'var(--accent)' : '', background: on ? 'var(--accent-soft)' : '' },
       onclick: async () => {
         if (on) return;
-        const ok = await confirmDialog({ title: `Переключить到「${title}」？`, desc: `${note}。约 30 秒内生效。`, confirm: 'Переключить' });
+        const ok = await confirmDialog({ title: `Переключить на «${title}»?`, desc: `${note}. Вступит в силу примерно через 30 секунд.`, confirm: 'Переключить' });
         if (!ok) return;
-        try { await post('/api/fish/bite_mode', { mode: m }); toast(`已Переключить到「${title}」`); render(); } catch (e) { toast(errText(e), 'bad'); }
+        try { await post('/api/fish/bite_mode', { mode: m }); toast(`Переключено на «${title}»`); render(); } catch (e) { toast(errText(e), 'bad'); }
       },
     }, h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('b', { style: { fontSize: '15px' }, text: title }), on ? badge('Текущий режим', 'accent') : null),
     h('p', { class: 'text-2 small', style: { marginTop: '6px' }, text: desc }));
   }));
 
-  // 出Рыба方式
+  // Режим появления рыбы
   const spawnMode = val('grade_ratio_enabled', '1') === '1' ? 'grade_ratio' : val('two_stage_hunt_enabled', '0') === '1' ? 'two_stage' : val('fish_hunt_enabled', '0') === '1' ? 'fish_hunt' : '';
   const spawnCards = h('div', { class: 'grid-3' }, SPAWN.map(([m, title, desc]) => {
     const on = spawnMode === m;
@@ -70,8 +70,8 @@ export default async function rules() {
       type: 'button', class: 'card', style: { textAlign: 'left', padding: '16px 18px', cursor: on ? 'default' : 'pointer', borderColor: on ? 'var(--accent)' : '', background: on ? 'var(--accent-soft)' : '' },
       onclick: async () => {
         if (on) return;
-        if (form.isDirty() && !(await confirmDialog({ title: 'Есть несохранённые изменения', desc: 'Переключить出Рыба方式会Обновить页面，没Сохранить的修改会丢失。', confirm: '继续Переключить' }))) return;
-        try { await post('/api/fish/spawn_mode', { mode: m }); toast(`已Переключить到「${title}」，约 30 秒内生效`); render(); } catch (e) { toast(errText(e), 'bad'); }
+        if (form.isDirty() && !(await confirmDialog({ title: 'Есть несохранённые изменения', desc: 'Переключение режима появления рыбы перезагрузит страницу, а несохранённые изменения будут потеряны.', confirm: 'Продолжить' }))) return;
+        try { await post('/api/fish/spawn_mode', { mode: m }); toast(`Переключено на «${title}»，约 30 秒内生效`); render(); } catch (e) { toast(errText(e), 'bad'); }
       },
     }, h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('b', { text: title }), on ? badge('Текущий режим', 'accent') : null),
     h('p', { class: 'muted small', style: { marginTop: '6px' }, text: desc }));
@@ -79,22 +79,22 @@ export default async function rules() {
   const gradeEditors = (GRADE_SETS[spawnMode] || []).map((set) => gradeEditor(form, set, t, spawnMode === 'grade_ratio'));
 
   return h('div', { class: 'page' },
-    pageHead('Правила игры', '决定钓Рыба玩起来是什么感觉。具体数字（咬钩快慢、经验倍率等）在「数值调整」里改。'),
+    pageHead('Правила игры', 'Определяет характер рыбалки. Числовые параметры (скорость клёва, множитель опыта и другие) настраиваются в разделе «Настройка параметров».'),
     section({
       title: 'Стиль игры', desc: 'Переключение набора из шести правил одним нажатием.',
       actions: cur === 'mixed' ? badge('Пользовательский набор', 'warn') : null,
-      body: h('div', { class: 'stack' }, styleCards, cur === 'mixed' ? callout('info', '下面的Правила被单独改过，不属于任何一种预设。选择上面任一风格会整体覆盖。') : null),
+      body: h('div', { class: 'stack' }, styleCards, cur === 'mixed' ? callout('info', 'Некоторые правила изменены вручную и не соответствуют готовому профилю. Выбор любого профиля выше перезапишет их.') : null),
     }),
     section({ title: 'Правила', desc: 'Каждое правило можно включать отдельно. Изменения вступают в силу примерно через 30 секунд.', body: h('div', {}, RULE_SWITCHES.map(([k, l, d, def]) => form.row({ key: k, label: l, help: d, kind: 'bool', def }, val(k, def)))) }),
     section({
-      title: '出Рыба方式', desc: '决定钓到的Рыба里，好Рыба（Трофей、Голубая корона）占多少。三选一，点卡片Переключить。',
+      title: 'Режим появления рыбы', desc: 'Определяет долю ценной рыбы (трофеи и рыба с голубой короной) в улове. Выберите один из трёх режимов.',
       body: h('div', { class: 'stack' }, spawnCards, ...gradeEditors,
-        spawnMode === 'fish_hunt' ? callout('info', 'Рыба猎四阶段按Игроки打窝、聚Рыба的进度自动推进，没有需要手动设置的比例。') : null,
-        !spawnMode ? callout('warn', '还没有选择出Рыба方式，目前按旧版Правила出Рыба。') : null),
+        spawnMode === 'fish_hunt' ? callout('info', 'Четыре стадии клёва按Игроки打窝、聚Рыба的进度自动推进，没有需要手动设置的比例。') : null,
+        !spawnMode ? callout('warn', '还没有选择Режим появления рыбы，目前按旧版Правила出Рыба。') : null),
     }),
     section({ title: 'Другое', body: h('div', {},
       OTHER.map(([k, l, d, def]) => form.row({ key: k, label: l, help: d, kind: 'bool', def }, val(k, def))),
-      form.row({ key: 'hook_spawn_match_strength', label: 'Рыба钩大小影响出Рыба', help: '0 表示不影响；1 表示大钩更容易钓到大Рыба、小钩更容易钓到小Рыба；2 更明显。选「按比例出Рыба」时不起作用。', kind: 'float', min: 0, max: 2, def: '0' }, val('hook_spawn_match_strength', '0'))) }));
+      form.row({ key: 'hook_spawn_match_strength', label: 'Рыба钩大小影响出Рыба', help: '0 表示不影响；1 表示大钩更容易钓到大Рыба、小钩更容易钓到小Рыба；2 更明显。选「Распределение по категориям」时不起作用。', kind: 'float', min: 0, max: 2, def: '0' }, val('hook_spawn_match_strength', '0'))) }));
 }
 
 // Доли четырёх категорий编辑：输入相对权重，实时显示换算后的百分比
@@ -130,8 +130,8 @@ function gradeEditor(form, set, t, interactive) {
       handle.setAttribute('aria-valuenow', nums[i]);
       handle.setAttribute('aria-valuetext', GRADES[i][1] + ' ' + (nums[i] / sum * 100).toFixed(1) + '%');
     });
-    hint.textContent = !interactive ? '填相对Количество，会自动换算成百分比' :
-      nums.every(n => n === 0) ? '总权重为 0，请先输入一档权重' : '可输入权重，也可拖动分界线调整';
+    hint.textContent = !interactive ? 'Введите относительные значения — они автоматически преобразуются в проценты' :
+      nums.every(n => n === 0) ? 'Суммарный вес равен 0. Сначала задайте вес хотя бы одной категории' : 'Можно ввести веса или перетащить разделители';
     bar.replaceChildren(...nums.map((n, i) => h('div', { style: { width: (n / sum * 100) + '%', background: GRADES[i][2] } })));
     legend.replaceChildren(...nums.map((n, i) => h('span', {}, h('span', { style: { display: 'inline-block', width: '8px', height: '8px', borderRadius: '2px', background: GRADES[i][2], marginRight: '6px' } }),
       GRADES[i][1] + ' ', h('b', { text: (n / sum * 100).toFixed(1) + '%' }))));
