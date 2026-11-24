@@ -151,7 +151,7 @@ function items(p, reload) {
       h('td', { class: 'num', text: fmt(x.qty) }),
       h('td', { class: 'num', text: x.durability === undefined || x.durability === null ? '—' : Number(x.durability) <= 1 ? (Number(x.durability) * 100).toFixed(1) + '%' : String(x.durability) }),
       h('td', { class: 'num' }, btn('Удалить', async () => {
-        if (!(await confirmDialog({ title: `Удалить「${x.name || x.item_id}」？`, desc: '从这个Игроки的Инвентарь或装备里Удалить，Это действие нельзя отменить.', confirm: 'Удалить', danger: true }))) return;
+        if (!(await confirmDialog({ title: `Удалить「${x.name || x.item_id}」？`, desc: 'Предмет будет удалён из инвентаря или экипировки игрока. Это действие нельзя отменить.', confirm: 'Удалить', danger: true }))) return;
         try { await post('/api/players/items/delete', { uid: p.uid, guids: [x.guid] }); toast('Удалено. Изменение вступит в силу примерно через 2 секунды.'); setTimeout(reload, 2300); } catch (e) { toast(errText(e), 'bad'); }
       }, 'ghost sm')))) : [h('tr', {}, h('td', { colspan: 5 }, empty(q ? 'Подходящие предметы не найдены' : 'Инвентарь пуст')))]));
   };
@@ -296,7 +296,7 @@ function skills(p, reload, setDirty) {
 function mail(p, reload) {
   const rows = p.mails || [];
   return h('div', { class: 'stack' },
-    h('div', { class: 'row' }, h('span', { class: 'grow muted small', text: 'Здесь можно удалить проблемное письмо, которое игрок не может удалить или получить, а затем отправить его повторно.' }), btn('给他Написать письмо', () => navigate('mail', p.uid), 'primary sm', { icon: 'mail' })),
+    h('div', { class: 'row' }, h('span', { class: 'grow muted small', text: 'Здесь можно удалить проблемное письмо, которое игрок не может удалить или получить, а затем отправить его повторно.' }), btn('Написать письмо игроку', () => navigate('mail', p.uid), 'primary sm', { icon: 'mail' })),
     rows.length ? h('div', { class: 'table-wrap', style: { maxHeight: '62vh' } }, h('table', { class: 'table' },
       h('thead', {}, h('tr', {}, h('th', { text: 'Содержание' }), h('th', { text: 'Тип' }), h('th', { text: 'Статус' }), h('th', { text: 'Время' }), h('th', {}))),
       h('tbody', {}, rows.map((m) => h('tr', {},
@@ -306,6 +306,6 @@ function mail(p, reload) {
         h('td', { class: 'small muted', title: timeText(m.created_ts), text: relTime(m.created_ts) }),
         h('td', {}, btn('Удалить', async () => {
           if (!(await confirmDialog({ title: 'Удалить это письмо?', desc: 'Вложения会一起丢弃，Это действие нельзя отменить.', confirm: 'Удалить', danger: true }))) return;
-          try { await post('/api/players/mail/delete', { uid: p.uid, ids: [m.id] }); toast('已Удалить'); setTimeout(reload, 300); } catch (e) { toast(errText(e), 'bad'); }
+          try { await post('/api/players/mail/delete', { uid: p.uid, ids: [m.id] }); toast('Удалено'); setTimeout(reload, 300); } catch (e) { toast(errText(e), 'bad'); }
         }, 'ghost sm'))))))) : h('div', { class: 'card' }, empty('Почтовый ящик пуст')));
 }
