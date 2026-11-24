@@ -165,7 +165,7 @@ export function dialog({ title, desc, body, actions = [], size = '', onClose } =
   }, a.label)));
   const box = h('div', { class: 'dialog ' + size, role: 'dialog', 'aria-modal': 'true' },
     h('div', { class: 'dialog-head' }, h('div', { class: 'grow' }, h('h3', { text: title }), desc ? h('p', { text: desc }) : null),
-      h('button', { class: 'btn ghost icon sm', 'aria-label': 'Выкл.闭', onclick: close }, icon('x'))),
+      h('button', { class: 'btn ghost icon sm', 'aria-label': 'Закрыть', onclick: close }, icon('x'))),
     body ? h('div', { class: 'dialog-body' }, body) : null,
     actions.length ? foot : null);
   const overlay = h('div', { class: 'overlay', onmousedown: (e) => { if (e.target === overlay) close(); } }, box);
@@ -192,7 +192,7 @@ export function drawer({ title, sub, body, foot, onClose, width } = {}) {
   const onKey = (e) => { if (e.key === 'Escape' && !document.querySelector('.overlay:not(.drawer-overlay)')) close(); };
   const panel = h('div', { class: 'drawer', style: width ? { width } : null },
     h('div', { class: 'drawer-head' }, h('div', { class: 'grow' }, h('h3', { text: title }), sub ? h('div', { class: 'muted small', text: sub }) : null),
-      h('button', { class: 'btn ghost icon sm', 'aria-label': 'Выкл.闭', onclick: close }, icon('x'))),
+      h('button', { class: 'btn ghost icon sm', 'aria-label': 'Закрыть', onclick: close }, icon('x'))),
     h('div', { class: 'drawer-body' }, body),
     foot ? h('div', { class: 'drawer-foot' }, foot) : null);
   const overlay = h('div', { class: 'overlay drawer-overlay', onmousedown: (e) => { if (e.target === overlay) close(); } }, panel);
@@ -406,10 +406,10 @@ function validate(spec, raw) {
     if (spec.pattern && raw && !spec.pattern.test(raw)) return spec.patternMsg || 'Неверный формат';
     return '';
   }
-  if (raw === '') return spec.optional ? '' : 'Заполните поле数值';
+  if (raw === '') return spec.optional ? '' : 'Введите числовое значение';
   const n = Number(raw);
-  if (!Number.isFinite(n)) return 'Заполните поле数字';
-  if (spec.kind === 'int' && !Number.isInteger(n)) return 'Заполните поле整数';
+  if (!Number.isFinite(n)) return 'Введите число';
+  if (spec.kind === 'int' && !Number.isInteger(n)) return 'Введите целое число';
   const lo = spec.min ?? (spec.max !== undefined ? 0 : undefined);
   if (lo !== undefined && n < lo) return 'Значение не может быть меньше ' + lo;
   if (spec.max !== undefined && n > spec.max) return 'Значение не может быть больше ' + spec.max;
