@@ -2,6 +2,7 @@ package admin
 
 import (
 	"fmt"
+	"database/sql"
 	"net/http"
 	"regexp"
 	"strings"
@@ -50,4 +51,27 @@ func (s *Server) handleAccountUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.db.AuditLogWrite(ctx, adminOf(r), "account_update", fmt.Sprintf("uid=%d", req.UID), fmt.Sprintf("username:%s->%s password_changed:%t", oldUsername, req.Username, req.Password != ""))
 	writeJSON(w, map[string]any{"ok": true, "uid": req.UID, "username": req.Username, "password_changed": req.Password != "", "updated_ts": time.Now().Unix()})
+}
+
+
+// handleAccountDelete удаляет учетную запись, не затрагивая игровой профиль и его данные.
+func (s *Server) handleAccountDelete(w http.ResponseWriter, r *http.Request) {
+	var req struct { UID int64 `json:"uid"` }
+	if err := readJSON(r, &req); err != nil || req.UID <= 0 {
+		httpError(w, 400, "неверный UID аккаунта")
+		return
+	}
+	ctx := r.Context()
+	var username string
+	if err := s.db.SQL.QueryRowContext(ctx, "SELECT username FROM player_account WHERE uid=?", req.UID).Scan(&username); err != nil {
+		if err == sql.ErrNoRows { httpError(w, 404, "аккаунт не найден"); return }
+		httpError(w, 500, "не удалось прочитать аккаунт")
+		return
+	}
+	res, err := s.db.SQL.ExecContext(ctx, "DELETE FROM player_account WHERE uid=?", req.UID)
+	if err != nil { httpError(w, 500, "не удалось удалить аккаунт"); return }
+	n, _ := res.RowsAffected()
+	if n == 0 { httpError(w, 404, "аккаунт не найден"); return }
+	_ = s.db.AuditLogWrite(ctx, adminOf(r), "account_delete", fmt.Sprintf("uid=%d", req.UID), "username="+username)
+	writeJSON(w, map[string]any{"ok": true, "uid": req.UID})
 }
