@@ -6,7 +6,7 @@ const KINDS = [
   ['all', 'Все', null],
   ['player', 'Игроки', /^(player_update|grant_item|item_delete|keepnet_|skill_|kick|ban|mail_)/],
   ['play', 'Рыбалка', /^(tunable|fish_|bite_mode|spawn_mode|hook_profile|bait_rule)/],
-  ['shop', '商店', /^shop_/],
+  ['shop', 'Магазин', /^shop_/],
   ['login', 'Вход', /^login$/],
 ];
 
