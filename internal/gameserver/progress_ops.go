@@ -614,7 +614,7 @@ func (s *Server) fishingEndSettle(ctx *Ctx) ([]byte, bool) {
 	if hasFish && res != nil && !res.replayed && res.levelsGained > 0 {
 		ctx.Sess.Push2_6(max64(1, res.newLevel-1))
 		// 官方聊天模板播报升级（k00；f2 填等级的 f32 位模式）。
-		ctx.Sess.pushLevelUpChat(res.newLevel)
+		ctx.Sess.pushSystemChat(fmt.Sprintf("Поздравляем! Новый уровень: %d", res.newLevel))
 	}
 	if hasFish && !res.replayed {
 		ctx.Sess.Push2_1()
@@ -624,7 +624,7 @@ func (s *Server) fishingEndSettle(ctx *Ctx) ([]byte, bool) {
 	if hasFish && res != nil && !res.replayed {
 		if lvl := extraSettleMaxLevel(extraResults); lvl > res.newLevel {
 			ctx.Sess.Push2_6(max64(1, lvl-1))
-			ctx.Sess.pushLevelUpChat(lvl)
+			ctx.Sess.pushSystemChat(fmt.Sprintf("Поздравляем! Новый уровень: %d", lvl))
 		}
 	}
 	// 上鱼事件交给成就规则判断一次；2/8 弹窗排在 801 应答之后。
