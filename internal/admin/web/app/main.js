@@ -1,13 +1,13 @@
-// RF4 管理后台入口：登录、框架、导航。各页面按需加载。
+// Вход в панель управления RF4: авторизация, интерфейс и навигация. Страницы загружаются по мере необходимости.
 import { h, $, api, post, icon, getToken, setToken, onAuth, route, render, navigate, toast, errText, parseHash } from './core.js';
 
 // 导航结构即信息架构：按「管理员想做的事」分组，而不是按后端模块。
 const NAV = [
-  { group: null, items: [['dashboard', '总览', 'home']] },
-  { group: '玩家', items: [['players', '玩家', 'users'], ['accounts', '账号', 'users'], ['mail', '发邮件', 'mail']] },
-  { group: '钓鱼玩法', items: [['rules', '玩法规则', 'rules'], ['waters', '水域与鱼种', 'water'], ['bait', '鱼饵偏好', 'bait'], ['hooks', '鱼钩', 'hook'], ['tuning', '数值调整', 'sliders']] },
-  { group: '经济', items: [['shop', '商店', 'store']] },
-  { group: '系统', items: [['audit', '操作记录', 'list'], ['changelog', '更新日志', 'doc'], ['about', '关于', 'info']] },
+  { group: null, items: [['dashboard', 'Обзор', 'home']] },
+  { group: 'Игроки', items: [['players', 'Игроки', 'users'], ['accounts', 'Аккаунты', 'users'], ['mail', 'Почта', 'mail']] },
+  { group: 'Рыбалка', items: [['rules', 'Правила игры', 'rules'], ['waters', 'Водоёмы и рыба', 'water'], ['bait', 'Предпочтения рыбы', 'bait'], ['hooks', 'Крючки', 'hook'], ['tuning', 'Настройка параметров', 'sliders']] },
+  { group: 'Экономика', items: [['shop', 'Магазин', 'store']] },
+  { group: 'Система', items: [['audit', 'Журнал действий', 'list'], ['changelog', 'История изменений', 'doc'], ['about', 'О программе', 'info']] },
 ];
 const PAGES = {
   dashboard: () => import('./pages/dashboard.js'),
@@ -31,11 +31,11 @@ for (const [name, load] of Object.entries(PAGES)) {
 let me = null;
 
 function brand() {
-  return h('div', { class: 'brand' }, h('div', { class: 'brand-mark' }, icon('logo')), h('div', {}, h('b', { text: '管理后台' }), h('span', { text: 'RF4 本地服务器' })));
+  return h('div', { class: 'brand' }, h('div', { class: 'brand-mark' }, icon('logo')), h('div', {}, h('b', { text: 'Панель администратора' }), h('span', { text: 'Локальный сервер RF4' })));
 }
 
 function sidebar() {
-  const nav = h('nav', { 'aria-label': '主导航' });
+  const nav = h('nav', { 'aria-label': 'Главная навигация' });
   for (const g of NAV) {
     if (g.group) nav.append(h('div', { class: 'nav-group', text: g.group }));
     for (const [key, label, ic] of g.items) {
@@ -46,8 +46,8 @@ function sidebar() {
   return h('aside', { class: 'side' }, brand(), nav,
     h('div', { class: 'side-foot' },
       h('div', { class: 'avatar', text: name.slice(0, 1).toUpperCase() }),
-      h('div', { class: 'who' }, name, h('small', { text: '管理员' })),
-      h('button', { class: 'btn ghost icon sm', title: '退出登录', 'aria-label': '退出登录', onclick: logout }, icon('logout'))));
+      h('div', { class: 'who' }, name, h('small', { text: 'Администратор' })),
+      h('button', { class: 'btn ghost icon sm', title: 'Выйти', 'aria-label': 'Выйти', onclick: logout }, icon('logout'))));
 }
 
 document.addEventListener('rf4:route', (e) => {
@@ -63,19 +63,19 @@ export function updateBanner(u) {
   if (!slot) return;
   if (!u || !u.available) { slot.replaceChildren(); return; }
   const links = [
-    [u.download_mirror_url, '下载（国内加速）', 'primary'],
-    [u.download_url, '从 GitHub 下载', ''],
-    [u.channel === 'preview' ? '' : u.preview_download_mirror, '抢先体验预览版', 'ghost'],
-    [u.notes_url, '看看更新了什么', 'ghost'],
+    [u.download_mirror_url, 'Скачать (ускоренная загрузка)', 'primary'],
+    [u.download_url, 'Скачать с GitHub', ''],
+    [u.channel === 'preview' ? '' : u.preview_download_mirror, 'Предварительная версия', 'ghost'],
+    [u.notes_url, 'Что нового', 'ghost'],
   ].filter(([url]) => safeURL(url)).map(([url, label, kind]) => h('a', { class: 'btn sm ' + kind, href: safeURL(url), target: '_blank', rel: 'noreferrer', text: label }));
   const dismiss = u.forced ? null : h('button', {
-    class: 'btn ghost sm', text: '跳过这个版本', onclick: async () => {
+    class: 'btn ghost sm', text: 'Пропустить эту версию', onclick: async () => {
       try {
         // launcher owns update dismiss at the root API even when admin is mounted under /admin/.
         const r = await fetch('/api/update/dismiss', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ version: u.latest_version }) });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         slot.replaceChildren();
-      } catch (e) { toast('操作失败：' + errText(e), 'bad'); }
+      } catch (e) { toast('Не удалось выполнить действие: ' + errText(e), 'bad'); }
     },
   });
   slot.replaceChildren(h('div', { class: 'callout ' + (u.forced ? 'warn' : 'info'), style: { margin: '16px 40px 0', alignItems: 'center', maxWidth: '1520px' } },
@@ -101,7 +101,7 @@ function noticeBar() {
   const p = txt.lastIndexOf('：');
   const msg = p > 0 ? [txt.slice(0, p + 1), h('b', { text: txt.slice(p + 1) })] : [txt];
   const bar = h('div', { class: 'notice-bar' }, h('span', {}, msg),
-    h('button', { 'aria-label': '关闭', title: '关闭', onclick: () => { bar.remove(); try { localStorage.setItem(KEY, '1'); } catch (e) {} } }, icon('x', 16)));
+    h('button', { 'aria-label': 'Закрыть', title: 'Закрыть', onclick: () => { bar.remove(); try { localStorage.setItem(KEY, '1'); } catch (e) {} } }, icon('x', 16)));
   return bar;
 }
 
@@ -109,7 +109,7 @@ function noticeBar() {
 function loginView() {
   const user = h('input', { class: 'input', id: 'lu', autocomplete: 'username', required: true });
   const pass = h('input', { class: 'input', id: 'lp', type: 'password', autocomplete: 'current-password', required: true });
-  const submit = h('button', { class: 'btn primary lg', style: { width: '100%' }, type: 'submit', text: '登录' });
+  const submit = h('button', { class: 'btn primary lg', style: { width: '100%' }, type: 'submit', text: 'Войти' });
   const err = h('div', { class: 'callout bad', hidden: true, style: { marginBottom: '14px' } });
   const form = h('form', {
     class: 'card login-card',
@@ -122,18 +122,18 @@ function loginView() {
         setToken(d.token);
       } catch (ex) {
         err.hidden = false;
-        err.textContent = ex.status === 401 || ex.status === 403 ? '账号或密码不对。' : errText(ex);
+        err.textContent = ex.status === 401 || ex.status === 403 ? 'Неверный логин или пароль.' : errText(ex);
       } finally { submit.disabled = false; }
     },
   },
   h('div', { class: 'brand-mark' }, icon('logo')),
-  h('h1', { text: '登录管理后台' }),
-  h('p', { text: '管理玩家、钓鱼玩法、商店和系统设置' }),
+  h('h1', { text: 'Вход в панель администратора' }),
+  h('p', { text: 'Управление игроками, рыбалкой, магазином и настройками сервера' }),
   err,
-  h('div', { class: 'field' }, h('label', { for: 'lu', text: '账号' }), user),
-  h('div', { class: 'field' }, h('label', { for: 'lp', text: '密码' }), pass),
+  h('div', { class: 'field' }, h('label', { for: 'lu', text: 'Аккаунты' }), user),
+  h('div', { class: 'field' }, h('label', { for: 'lp', text: 'Пароль' }), pass),
   submit,
-  h('div', { class: 'hint', html: '忘记密码？账号和密码写在服务器目录的 <code>config.yaml</code> 里（<code>admin.username</code> / <code>admin.password</code>）。发布包默认是 <code>admin</code> / <code>admin123</code>。' }));
+  h('div', { class: 'hint', html: 'Забыли пароль? Логин и пароль указаны в файле <code>config.yaml</code> в каталоге сервера (<code>admin.username</code> / <code>admin.password</code>). По умолчанию: <code>admin</code> / <code>admin123</code>.' }));
   return h('div', { class: 'login' }, form);
 }
 
@@ -144,7 +144,7 @@ async function boot() {
     me = await api('/api/me');
   } catch (e) {
     if (e.status === 401) return;
-    app.replaceChildren(h('div', { class: 'login' }, h('div', { class: 'callout bad' }, '连接不上管理后台：' + errText(e))));
+    app.replaceChildren(h('div', { class: 'login' }, h('div', { class: 'callout bad' }, 'Не удалось подключиться к панели администратора: ' + errText(e))));
     return;
   }
   const notice = noticeBar();
