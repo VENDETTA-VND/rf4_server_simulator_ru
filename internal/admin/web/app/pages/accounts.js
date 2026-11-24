@@ -72,14 +72,14 @@ window.addEventListener('rf4:accounts-refresh', () => {
 async function deleteAccount(a) {
   const ok = await confirmDialog({
     title: 'Удалить аккаунт «' + a.username + '»?',
-    desc: 'Будет удалена учетная запись для входа. Игровой профиль, персонаж и его данные сохранятся в базе; UID не будет использоваться повторно. Это действие нельзя отменить.',
+    desc: 'Будут безвозвратно удалены аккаунт, персонаж, весь его прогресс, предметы, почта и связанные данные. UID станет доступен для повторной выдачи другому игроку. Активные подключения могут сохраняться до переподключения. Это действие нельзя отменить.',
     confirm: 'Удалить аккаунт',
     danger: true,
   });
   if (!ok) return;
   try {
     await post('/api/accounts/delete', { uid: a.uid });
-    toast('Аккаунт удалён. Данные персонажа сохранены.');
+    toast('Аккаунт и персонаж удалены. UID освобождён.');
     window.dispatchEvent(new CustomEvent('rf4:accounts-refresh'));
   } catch (e) { toast(errText(e), 'bad'); }
 }
