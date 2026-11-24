@@ -102,7 +102,7 @@ export async function api(path, opt = {}) {
   try { data = text ? JSON.parse(text) : {}; } catch (e) { data = { raw: text }; }
   if (!r.ok) {
     if (r.status === 401) setToken('');
-    const err = new Error(data.error || ('请求失败（HTTP ' + r.status + '）'));
+    const err = new Error(data.error || ('Ошибка запроса (HTTP ' + r.status + '）'));
     err.status = r.status;
     err.data = data;
     throw err;
@@ -165,7 +165,7 @@ export function dialog({ title, desc, body, actions = [], size = '', onClose } =
   }, a.label)));
   const box = h('div', { class: 'dialog ' + size, role: 'dialog', 'aria-modal': 'true' },
     h('div', { class: 'dialog-head' }, h('div', { class: 'grow' }, h('h3', { text: title }), desc ? h('p', { text: desc }) : null),
-      h('button', { class: 'btn ghost icon sm', 'aria-label': '关闭', onclick: close }, icon('x'))),
+      h('button', { class: 'btn ghost icon sm', 'aria-label': 'Выкл.闭', onclick: close }, icon('x'))),
     body ? h('div', { class: 'dialog-body' }, body) : null,
     actions.length ? foot : null);
   const overlay = h('div', { class: 'overlay', onmousedown: (e) => { if (e.target === overlay) close(); } }, box);
@@ -174,14 +174,14 @@ export function dialog({ title, desc, body, actions = [], size = '', onClose } =
   setTimeout(() => { const f = box.querySelector('input,select,textarea'); if (f) f.focus(); }, 30);
   return { close, box };
 }
-export function confirmDialog({ title, desc, confirm = '确定', danger = false }) {
+export function confirmDialog({ title, desc, confirm = 'Подтвердить', danger = false }) {
   return new Promise((resolve) => {
     let done = false;
     dialog({
       title, desc,
       onClose: () => { if (!done) resolve(false); },
       actions: [
-        { label: '取消', kind: 'ghost' },
+        { label: 'Отмена', kind: 'ghost' },
         { label: confirm, kind: danger ? 'danger solid' : 'primary', onClick: () => { done = true; resolve(true); } },
       ],
     });
@@ -192,7 +192,7 @@ export function drawer({ title, sub, body, foot, onClose, width } = {}) {
   const onKey = (e) => { if (e.key === 'Escape' && !document.querySelector('.overlay:not(.drawer-overlay)')) close(); };
   const panel = h('div', { class: 'drawer', style: width ? { width } : null },
     h('div', { class: 'drawer-head' }, h('div', { class: 'grow' }, h('h3', { text: title }), sub ? h('div', { class: 'muted small', text: sub }) : null),
-      h('button', { class: 'btn ghost icon sm', 'aria-label': '关闭', onclick: close }, icon('x'))),
+      h('button', { class: 'btn ghost icon sm', 'aria-label': 'Выкл.闭', onclick: close }, icon('x'))),
     h('div', { class: 'drawer-body' }, body),
     foot ? h('div', { class: 'drawer-foot' }, foot) : null);
   const overlay = h('div', { class: 'overlay drawer-overlay', onmousedown: (e) => { if (e.target === overlay) close(); } }, panel);
@@ -323,9 +323,9 @@ export class Form {
     const control = buildControl(this, f);
     const metaBits = [];
     if (spec.kind === 'int' || spec.kind === 'float') {
-      if (spec.max !== undefined) metaBits.push('范围 ' + (spec.min ?? 0) + ' – ' + spec.max + (spec.unit ? ' ' + spec.unit : ''));
+      if (spec.max !== undefined) metaBits.push('Диапазон ' + (spec.min ?? 0) + ' – ' + spec.max + (spec.unit ? ' ' + spec.unit : ''));
     }
-    if (spec.def !== undefined && spec.def !== '') metaBits.push('默认 ' + (spec.kind === 'bool' ? (String(spec.def) === '1' || spec.def === true ? '开' : '关') : spec.def + (spec.unit && spec.kind !== 'bool' ? ' ' + spec.unit : '')));
+    if (spec.def !== undefined && spec.def !== '') metaBits.push('По умолчанию ' + (spec.kind === 'bool' ? (String(spec.def) === '1' || spec.def === true ? 'Вкл.' : 'Выкл.') : spec.def + (spec.unit && spec.kind !== 'bool' ? ' ' + spec.unit : '')));
     f.errEl = h('div', { class: 's-error', hidden: true });
     f.row = h('div', { class: 'setting' + (opts.wide ? ' wide-control' : '') },
       h('div', {},
@@ -402,17 +402,17 @@ function writeInput(f, v) {
 }
 function validate(spec, raw) {
   if (spec.kind !== 'int' && spec.kind !== 'float') {
-    if (spec.required && !raw) return '请填写' + spec.label;
-    if (spec.pattern && raw && !spec.pattern.test(raw)) return spec.patternMsg || '格式不正确';
+    if (spec.required && !raw) return 'Заполните поле' + spec.label;
+    if (spec.pattern && raw && !spec.pattern.test(raw)) return spec.patternMsg || 'Неверный формат';
     return '';
   }
-  if (raw === '') return spec.optional ? '' : '请填写数值';
+  if (raw === '') return spec.optional ? '' : 'Заполните поле数值';
   const n = Number(raw);
-  if (!Number.isFinite(n)) return '请填写数字';
-  if (spec.kind === 'int' && !Number.isInteger(n)) return '请填写整数';
+  if (!Number.isFinite(n)) return 'Заполните поле数字';
+  if (spec.kind === 'int' && !Number.isInteger(n)) return 'Заполните поле整数';
   const lo = spec.min ?? (spec.max !== undefined ? 0 : undefined);
-  if (lo !== undefined && n < lo) return '不能小于 ' + lo;
-  if (spec.max !== undefined && n > spec.max) return '不能大于 ' + spec.max;
+  if (lo !== undefined && n < lo) return 'Значение не может быть меньше ' + lo;
+  if (spec.max !== undefined && n > spec.max) return 'Значение не может быть больше ' + spec.max;
   return '';
 }
 function setError(f, msg) {
@@ -426,18 +426,18 @@ let savebarEl = null;
 export function savebar(form, { onSave, label } = {}) {
   if (!savebarEl) { savebarEl = h('div', { class: 'savebar', role: 'status' }); document.body.append(savebarEl); }
   const count = h('span');
-  const saveBtn = btn('保存修改', async () => {
+  const saveBtn = btn('Сохранить изменения', async () => {
     const keys = form.dirtyKeys();
-    if (!form.validate(keys)) { toast('有填写不正确的项，请检查标红的输入框', 'bad'); return; }
+    if (!form.validate(keys)) { toast('Есть ошибки в заполнении. Проверьте поля, выделенные красным.', 'bad'); return; }
     saveBtn.disabled = true;
-    try { await onSave(form.values(keys), keys); form.commit(form.values(keys)); toast('已保存'); }
+    try { await onSave(form.values(keys), keys); form.commit(form.values(keys)); toast('Сохранено'); }
     catch (e) { toast(errText(e), 'bad'); }
     finally { saveBtn.disabled = false; }
   }, 'primary sm');
-  savebarEl.replaceChildren(count, btn('放弃', () => form.reset(), 'ghost sm'), saveBtn);
+  savebarEl.replaceChildren(count, btn('Отменить', () => form.reset(), 'ghost sm'), saveBtn);
   const update = () => {
     const n = form.dirtyKeys().length;
-    count.replaceChildren((label || '') , h('b', { text: n }), ' 项修改尚未保存');
+    count.replaceChildren((label || '') , h('b', { text: n }), ' изменений не сохранено');
     savebarEl.classList.toggle('on', n > 0);
   };
   form.onChange = update;
@@ -496,13 +496,13 @@ export async function render() {
     window.scrollTo(0, 0);
   } catch (e) {
     if (e && e.status === 401) return;
-    root.replaceChildren(h('div', { class: 'page' }, callout('bad', ['页面加载失败：', errText(e)])));
+    root.replaceChildren(h('div', { class: 'page' }, callout('bad', ['Не удалось загрузить страницу: ', errText(e)])));
   }
 }
 window.addEventListener('beforeunload', (e) => { if (guardFn && guardFn()) { e.preventDefault(); e.returnValue = ''; } });
 let lastHash = location.hash;
 window.addEventListener('hashchange', () => {
-  if (guardFn && guardFn() && !confirm('有修改还没保存，确定离开吗？')) {
+  if (guardFn && guardFn() && !confirm('有修改还没保存，Подтвердить离Вкл.吗？')) {
     history.replaceState(null, '', lastHash);
     return;
   }
