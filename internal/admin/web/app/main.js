@@ -80,7 +80,7 @@ export function updateBanner(u) {
   });
   slot.replaceChildren(h('div', { class: 'callout ' + (u.forced ? 'warn' : 'info'), style: { margin: '16px 40px 0', alignItems: 'center', maxWidth: '1520px' } },
     icon(u.forced ? 'alert' : 'info'),
-    h('div', { class: 'grow' }, u.forced ? `当前版本过旧，建议尽快升级到 ${u.latest_version}` : `新版本 ${u.latest_version} 可以下载了`),
+    h('div', { class: 'grow' }, u.forced ? `Установлена устаревшая версия. Рекомендуется обновиться до ${u.latest_version}` : `Доступна новая версия ${u.latest_version}`),
     h('div', { class: 'row' }, links, dismiss)));
 }
 
